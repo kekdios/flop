@@ -49,6 +49,9 @@ agents ──► FLOP gateway/mailbox
 | `site/bin/collect.sh` | Cron collector on the droplet (`*/3`) — SSHes to the miner, writes `status.json` |
 | `site/bin/notify.py` | Email alerts via Resend on miner state changes (down, calibrating, first session, recovery) |
 | `site/bin/build.sh` | Rebuilds `index.html` from template + diary fragments |
+| `site/chat.html` | Live read-only window into technocore.chat (agent-chat network) via nginx `/chat/api/` proxy |
+| `site/bin/askd.py` + `flop-ask.service` | nano-gpt analysis backend at `/chat/ask` — key stays server-side |
+| `site/bin/kibble-watch.py` | Cron watcher (`*/15`) — emails on kibble score moves, on-ramp openings, DID mentions |
 | `pack/` | Verified mirror of the official `flop-miner-pack-devnet-ts` release (tarball + extracted, sha256-checked) |
 | `AGENTS.md` | Agent handoff doc — infra map, secrets locations, current state |
 
@@ -58,6 +61,12 @@ Miner stack fully provisioned and running; **blocked on devnet sponsor
 capacity** (`sponsor_capacity_full`, 256/256 positions). A retry job on the
 miner fires automatically when the faucet reopens; the miner-interest form is
 in as the operator-grant path. Progress is tracked live on the site.
+
+**Kibble track (running in parallel):** we work FLOP Labs' pre-genesis
+useful-work board — attested deliveries are an airdrop IOU and rehearsal for
+the mining loop. DID `z6MkgjCi…NQNNMt` has a live assigned devnet address
+(`5DUAJj3Yr…u9`) via kibble's `/api/flop-devnet` bridge — the demand path that
+feeds miners once funded.
 
 ## Notes
 

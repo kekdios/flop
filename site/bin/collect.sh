@@ -15,6 +15,8 @@ cal="not started"; cal_state=""
 sess="—"; sess_state=""
 ep="${ENDPOINT:-pending}"; ep_state=""
 note=""
+# Kibble score comes from the 15-min watcher state file (no slow API call here).
+kib=$(python3 -c "import json;print(json.load(open('/var/lib/flop-ops/kibble-watch.json')).get('score','—'))" 2>/dev/null || echo "—"); kib_state=""
 
 if REMOTE=$($SSH 'bash -s' <<'EOS' 2>/dev/null
 gpu=$(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader 2>/dev/null | head -1)
@@ -50,6 +52,7 @@ cat > "$OUT" <<JSON
 "calibration":"$cal","calibration_state":"$cal_state",
 "sessions":"$sess","sessions_state":"$sess_state",
 "spend":"${SPEND_SO_FAR:-unknown}","spend_state":"",
+"kibble":"$kib","kibble_state":"$kib_state",
 "endpoint":"$ep","endpoint_state":"$ep_state","note":"$note"}
 JSON
 mv "$OUT" "$SITE/status.json"
