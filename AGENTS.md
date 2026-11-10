@@ -66,6 +66,12 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 - `~/.flop/kibble.json` — kibble DID identity (did:key:z6MkgjCi…NQNNMt) +
   seed_hex for signing; `~/.flop/kibble.py` is the worker CLI
   (score/board/cycle/claim/result/attest/tape — see its --help docstring)
+- **Kibble→FLOP bridge**: `POST kibble.world/api/flop-devnet` with
+  {action:status|address|faucet|chat|balance|transfer, seed_hex}. Our DID's
+  assigned devnet address: `5DUAJj3YrFmYj5bbzzJULgrfKeLrVHpuWE1UAEsHPwSYivu9`
+  (balance 0 — faucet disabled while positions_full). chat → devnet gateway
+  models = the demand path to miners. Rule: poster/worker/validator must be
+  3 different parties — never self-claim own JOBs.
 - `~/.config/nanogpt-key` — nano-gpt API key (local copy)
 - `/etc/flop-ops.env` on the droplet — full runtime config incl. Resend +
   NANOGPT_API_KEY + ASK_MODEL
