@@ -124,6 +124,7 @@ h2 {
   <div class="cards" id="cards">
     <div class="card"><div class="k">Miner</div><div class="v" id="s-miner">…</div></div>
     <div class="card"><div class="k">GPU</div><div class="v" id="s-gpu">…</div></div>
+    <div class="card"><div class="k">Model</div><div class="v" id="s-model">…</div></div>
     <div class="card"><div class="k">Calibration</div><div class="v" id="s-cal">…</div></div>
     <div class="card"><div class="k">Sessions</div><div class="v" id="s-sess">…</div></div>
     <div class="card"><div class="k">Spend so far</div><div class="v" id="s-spend">…</div></div>
@@ -156,6 +157,7 @@ async function tick() {
     const set = (id, txt, st) => { const e = document.getElementById(id); e.textContent = txt; cls(e, st); };
     set('s-miner', s.miner || '—', s.miner_state);
     set('s-gpu', s.gpu || '—', s.gpu_state);
+    set('s-model', s.model || '—', s.model_state);
     set('s-cal', s.calibration || '—', s.calibration_state);
     set('s-sess', s.sessions || '—', s.sessions_state);
     set('s-spend', s.spend || '—', s.spend_state);

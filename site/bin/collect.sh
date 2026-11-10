@@ -10,6 +10,7 @@ SSH="ssh -i ${VM_SSH_KEY:-/root/.ssh/flop_vast} -o BatchMode=yes -o ConnectTimeo
 
 miner="provisioning"; miner_state="warn"
 gpu="—"; gpu_state=""
+model="—"; model_state=""
 cal="not started"; cal_state=""
 sess="—"; sess_state=""
 ep="${ENDPOINT:-pending}"; ep_state=""
@@ -20,9 +21,11 @@ gpu=$(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --for
 dock=$(docker ps --format '{{.Names}}:{{.Status}}' 2>/dev/null | tr '\n' ';')
 info=$(curl -s --max-time 5 http://127.0.0.1:8645/session/info 2>/dev/null || true)
 disk=$(df -h / | awk 'NR==2{print $4" free"}')
+model=$(basename "$(grep -m1 '^MODEL_NAME=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2-)" 2>/dev/null)
 echo "GPU=$gpu"
 echo "DOCKER=$dock"
 echo "DISK=$disk"
+echo "MODEL=$model"
 echo "SESSION_INFO<<$info>>"
 EOS
 ); then
@@ -35,6 +38,7 @@ EOS
   else cal="not calibrated"; fi
   sess=$(echo "$info" | grep -oE '"sessions"[ :]*[0-9]+' | grep -oE '[0-9]+' | head -1); sess=${sess:-0}
   note=$(echo "$REMOTE" | sed -n 's/^DISK=//p')
+  model=$(echo "$REMOTE" | sed -n 's/^MODEL=//p'); [ -n "$model" ] && model_state="ok" || model="—"
 else
   miner="unreachable"; miner_state="bad"; ep_state="bad"; note="ssh to VM failed"
 fi
@@ -42,6 +46,7 @@ fi
 cat > "$OUT" <<JSON
 {"updated":"$now","miner":"$miner","miner_state":"$miner_state",
 "gpu":"$gpu","gpu_state":"$gpu_state",
+"model":"$model","model_state":"$model_state",
 "calibration":"$cal","calibration_state":"$cal_state",
 "sessions":"$sess","sessions_state":"$sess_state",
 "spend":"${SPEND_SO_FAR:-unknown}","spend_state":"",
