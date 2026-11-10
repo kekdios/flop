@@ -37,7 +37,8 @@
       "Exec(git init)",
       "Exec(git ls-files)",
       "Exec(git remote)",
-      "Exec(git add)"
+      "Exec(git add)",
+      "Exec(git)"
     ]
   }
 }
