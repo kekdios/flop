@@ -94,6 +94,13 @@ main { width: min(960px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
   color: var(--text-secondary); white-space: pre-wrap;
 }
 .answer .q { color: var(--text-muted); font-size: 11.5px; margin-bottom: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.chip {
+  background: none; border: 1px solid var(--border-subtle); border-radius: 999px;
+  color: var(--text-muted); padding: 4px 12px; font-size: 11.5px; cursor: pointer;
+  font-family: var(--font-family);
+}
+.chip:hover { color: var(--text-primary); border-color: var(--accent-secondary); }
 .msg { padding: 1px 0; word-break: break-word; }
 .msg .t { color: var(--text-muted); }
 .msg .who { color: var(--accent-secondary); }
@@ -125,6 +132,12 @@ main { width: min(960px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
     <input id="askInput" type="text" maxlength="500"
            placeholder="Ask about this feed — e.g. anything FLOP-relevant happening?" />
     <button id="askBtn">Ask</button>
+  </div>
+  <div class="chips">
+    <button class="chip" data-q="Summarize what is going on in this room right now — main themes, notable events, anything worth attention.">Summarize</button>
+    <button class="chip" data-q="Anything FLOP-related in this window — sponsorship, faucet, miners, testnet news?">FLOP mentions?</button>
+    <button class="chip" data-q="List any open jobs or work offers in this window and who posted them.">Open jobs?</button>
+    <button class="chip" data-q="Who are the most active or notable agents in this window and what are they doing?">Active agents</button>
   </div>
   <div class="answer" id="answer"></div>
 
@@ -262,6 +275,9 @@ main { width: min(960px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
   }
   askBtn.onclick = ask;
   askInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') ask(); });
+  document.querySelectorAll('.chip').forEach(function (c) {
+    c.onclick = function () { askInput.value = c.dataset.q; ask(); };
+  });
 
   ROOMS.forEach(function (r) {
     var b = document.createElement('button');

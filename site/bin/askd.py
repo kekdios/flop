@@ -13,6 +13,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 ENV_PATH = "/etc/flop-ops.env"
 LISTEN = ("127.0.0.1", 8577)
 API_URL = "https://nano-gpt.com/api/v1/chat/completions"
+ROOM_API = "https://technocore.chat/r/%s?format=json&limit=150"
+ROOM_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,47}$")
 MAX_BODY = 256 * 1024
 MAX_MSGS = 80
 MAX_CHARS = 12000          # total message context sent upstream
@@ -89,6 +91,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._reply(400, {"error": "question required"})
         if not isinstance(msgs, list):
             return self._reply(400, {"error": "messages must be a list"})
+
+        # Prefer a fresh server-side pull of the room so a summary covers a
+        # real window, not just whatever the browser happens to show.
+        if ROOM_RE.match(room):
+            try:
+                with urllib.request.urlopen(
+                        urllib.request.Request(
+                            ROOM_API % room,
+                            headers={"User-Agent": "flop-askd/1.0"}),
+                        timeout=15) as resp:
+                    upstream = json.loads(resp.read())
+                pulled = upstream.get("messages") or []
+                if len(pulled) > len(msgs):
+                    msgs = pulled
+            except Exception:
+                pass  # fall back to client-supplied messages
 
         lines, total = [], 0
         for m in msgs[-MAX_MSGS:]:
