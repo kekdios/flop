@@ -38,7 +38,14 @@
       "Exec(git ls-files)",
       "Exec(git remote)",
       "Exec(git add)",
-      "Exec(git)"
+      "Exec(git)",
+      "Exec(diff)",
+      "Exec(bash)",
+      "Exec(nc)",
+      "Exec(openssl)",
+      "Exec(printf)",
+      "Exec(rm)",
+      "Exec($SSH)"
     ]
   }
 }
