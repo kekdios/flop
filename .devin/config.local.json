@@ -46,7 +46,10 @@
       "Exec(printf)",
       "Exec(rm)",
       "Exec($SSH)",
-      "Exec(file)"
+      "Exec(file)",
+      "Exec(~/.flop/venv/bin/python)",
+      "Exec(chmod)",
+      "Exec(~/.flop/kibble.py tape)"
     ]
   }
 }
