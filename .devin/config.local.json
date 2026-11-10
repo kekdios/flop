@@ -34,7 +34,10 @@
       "Exec(\"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser\")",
       "Exec(date)",
       "Exec(tar xzf)",
-      "Exec(git init)"
+      "Exec(git init)",
+      "Exec(git ls-files)",
+      "Exec(git remote)",
+      "Exec(git add)"
     ]
   }
 }
