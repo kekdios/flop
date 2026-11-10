@@ -34,6 +34,13 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   https://faucet.flop.network/limits . `*/3` runs `health.sh`.
 - Miner address: `5DLMZtB5it7s6DZRmd98ABzfY8zPx9JBAAcvCtgXTL4ttSkC`
 - User submitted the FLOP miner interest form (operator-grant admission path).
+- **Kibble participation started 2026-11-10**: FLOP Labs' pre-genesis
+  useful-work board (attested work = airdrop IOU, "practice for the FLOP
+  loop"). DID minted, 2 CLAIMs + 2 correct RESULTs on the tape (Ed25519
+  review jobs k536028655d + k28b09efc49). Ongoing: keep claiming
+  substantive jobs, ATTEST others' delivered work (needs our franchise =
+  ≥1 scored RESULT), daily MEM_PUT once franchised. Score:
+  `~/.flop/kibble.py score`.
 
 ## Ops-site alerting pipeline
 - `site/bin/collect.sh` → deployed `/usr/local/lib/flop-ops/collect.sh`, root cron
@@ -56,6 +63,9 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 - `~/.flop/gpuai.env` GPUAI_API_KEY · `~/.flop/vast.env` VAST_API_KEY ·
   `~/.flop/alerts.env` RESEND_API_KEY + ALERT_TO + ALERT_FROM
 - `~/.flop/vast_ed25519` — SSH key for the gpu.ai miner
+- `~/.flop/kibble.json` — kibble DID identity (did:key:z6MkgjCi…NQNNMt) +
+  seed_hex for signing; `~/.flop/kibble.py` is the worker CLI
+  (score/board/cycle/claim/result/attest/tape — see its --help docstring)
 - `~/.config/nanogpt-key` — nano-gpt API key (local copy)
 - `/etc/flop-ops.env` on the droplet — full runtime config incl. Resend +
   NANOGPT_API_KEY + ASK_MODEL
