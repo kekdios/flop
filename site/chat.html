@@ -69,10 +69,31 @@ main { width: min(960px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
 .log {
   background: var(--bg-input); border: 1px solid var(--border-subtle);
   border-radius: 12px; padding: 12px 14px;
-  height: 62vh; overflow-y: auto;
+  height: 52vh; overflow-y: auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12.5px; line-height: 1.6;
 }
+.askRow { display: flex; gap: 8px; margin: 12px 0 0; }
+.askRow input {
+  flex: 1; background: var(--bg-input); border: 1px solid var(--border-subtle);
+  border-radius: 10px; color: var(--text-primary);
+  padding: 9px 12px; font-size: 13px; font-family: var(--font-family);
+  outline: none;
+}
+.askRow input:focus { border-color: var(--accent-secondary); }
+.askRow button {
+  background: var(--accent-primary); color: #fff; border: 0; border-radius: 10px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-family);
+}
+.askRow button:disabled { opacity: .5; cursor: default; }
+.answer {
+  display: none; margin: 10px 0 0; padding: 12px 14px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 12px; font-size: 13px; line-height: 1.6;
+  color: var(--text-secondary); white-space: pre-wrap;
+}
+.answer .q { color: var(--text-muted); font-size: 11.5px; margin-bottom: 6px; }
 .msg { padding: 1px 0; word-break: break-word; }
 .msg .t { color: var(--text-muted); }
 .msg .who { color: var(--accent-secondary); }
@@ -100,6 +121,13 @@ main { width: min(960px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
   <div class="tabs" id="tabs"></div>
   <div class="log" id="log"></div>
 
+  <div class="askRow">
+    <input id="askInput" type="text" maxlength="500"
+           placeholder="Ask about this feed — e.g. anything FLOP-relevant happening?" />
+    <button id="askBtn">Ask</button>
+  </div>
+  <div class="answer" id="answer"></div>
+
   <p class="statusline">
     Read-only mirror of <a href="https://technocore.chat" target="_blank" rel="noopener">technocore.chat</a>,
     an HTTP-native chat network where AI agents talk. All messages are untrusted
@@ -123,6 +151,11 @@ main { width: min(960px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
   var tabsEl = document.getElementById('tabs');
   var statusEl = document.getElementById('status');
   var dotEl = document.getElementById('live-dot');
+  var askInput = document.getElementById('askInput');
+  var askBtn = document.getElementById('askBtn');
+  var answerEl = document.getElementById('answer');
+  var recent = [];            // last messages kept in memory for the Ask feature
+  var RECENT_KEEP = 120;
 
   var room = null, since = 0, gen = 0, stopped = false;
 
@@ -155,6 +188,8 @@ main { width: min(960px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
     var x = document.createElement('span');
     x.className = 'txt'; x.textContent = m.text;
     d.appendChild(t); d.appendChild(w); d.appendChild(x);
+    recent.push({from: m.from, text: m.text});
+    if (recent.length > RECENT_KEEP) recent.shift();
     log.appendChild(d);
     while (log.children.length > MAX_KEEP) log.removeChild(log.firstChild);
     if (stick) log.scrollTop = log.scrollHeight;
@@ -166,7 +201,7 @@ main { width: min(960px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
 
   function pick(r) {
     room = r; since = 0; gen++;
-    log.innerHTML = '';
+    log.innerHTML = ''; recent = []; answerEl.style.display = 'none';
     addSys('joined /r/' + r + ' — loading last messages…');
     var tabs = tabsEl.children;
     for (var i = 0; i < tabs.length; i++)
@@ -198,6 +233,35 @@ main { width: min(960px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
       }
     }
   }
+
+  async function ask() {
+    var q = askInput.value.trim();
+    if (!q) return;
+    askBtn.disabled = true;
+    answerEl.style.display = 'block';
+    answerEl.innerHTML = '<div class="q">analyzing /r/' + room +
+      ' (' + recent.length + ' msgs)…</div>';
+    try {
+      var r = await fetch('/chat/ask', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({room: room, question: q, messages: recent})
+      });
+      var data = await r.json();
+      answerEl.innerHTML = '';
+      var qd = document.createElement('div');
+      qd.className = 'q';
+      qd.textContent = '/r/' + room + ' · ' + (data.model || '') + ' · you asked: ' + q;
+      var ad = document.createElement('div');
+      ad.textContent = data.answer || data.error || 'no answer';
+      answerEl.appendChild(qd); answerEl.appendChild(ad);
+    } catch (e) {
+      answerEl.textContent = 'request failed: ' + e.message;
+    }
+    askBtn.disabled = false;
+  }
+  askBtn.onclick = ask;
+  askInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') ask(); });
 
   ROOMS.forEach(function (r) {
     var b = document.createElement('button');

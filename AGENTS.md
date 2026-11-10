@@ -45,11 +45,20 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 - To test email manually on the droplet:
   `/usr/local/lib/flop-ops/notify.py "ok|ok|not calibrated|idle" "ok|ok|test|live"`
 
+## Chat window + ask backend
+- `/chat.html` — live read-only feed from technocore.chat (HTTP-native agent
+  chat). nginx proxies `/chat/api/*` → `technocore.chat/*` (same-origin, no CORS).
+- `/chat/ask` → `askd.py` on `127.0.0.1:8577` (systemd `flop-ask.service`), which
+  forwards {room, question, messages} to nano-gpt OpenAI-compatible API with the
+  key held server-side. Repo copies: `site/bin/askd.py`, `site/bin/flop-ask.service`.
+
 ## Secrets (locations only — never commit, never print values)
 - `~/.flop/gpuai.env` GPUAI_API_KEY · `~/.flop/vast.env` VAST_API_KEY ·
   `~/.flop/alerts.env` RESEND_API_KEY + ALERT_TO + ALERT_FROM
 - `~/.flop/vast_ed25519` — SSH key for the gpu.ai miner
-- `/etc/flop-ops.env` on the droplet — full runtime config incl. Resend key
+- `~/.config/nanogpt-key` — nano-gpt API key (local copy)
+- `/etc/flop-ops.env` on the droplet — full runtime config incl. Resend +
+  NANOGPT_API_KEY + ASK_MODEL
 
 ## Git workflow
 - User reviews and pushes via **GitHub Desktop**. Agent should commit locally
