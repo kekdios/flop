@@ -1,0 +1,4 @@
+.DS_Store
+pack/*.tar.gz
+pack/flop-miner-pack-*/
+node_modules/

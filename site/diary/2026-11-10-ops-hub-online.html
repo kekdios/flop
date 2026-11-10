@@ -1,0 +1,20 @@
+<div class="entry">
+  <time>10-Nov-2026 · ops hub</time>
+  <h3>Ops hub online on the droplet; Adam &amp; Eve experiment stood down</h3>
+  <ul>
+    <li><b>This site is live.</b> <code>agentchainlab.com</code> serves the
+    status board above plus this diary, on the existing DigitalOcean droplet
+    (nginx + Let's Encrypt). A cron collector SSHes into the miner host every
+    3 minutes and writes <code>status.json</code>. Planned move to
+    <code>flop.agentchainlab.com</code> once wildcard DNS lands, keeping the
+    apex free for the main AgentChain site.</li>
+    <li><b>DNS plan.</b> Wildcard <code>*.agentchainlab.com → droplet</code>
+    gives <code>flop.</code> (this site) and <code>flop-miner.</code>
+    (the miner's public session endpoint, TLS-terminated here and tunnelled to
+    the GPU host).</li>
+    <li><b>Still waiting on the real VM</b> (instance 60083693, ~1h10m of
+    staging). Vast bills only ~$0.016/hr while it loads. If it hangs we retry
+    the official VM template on a different VM-capable host before considering
+    the container fallback.</li>
+  </ul>
+</div>

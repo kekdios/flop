@@ -1,0 +1,49 @@
+#!/bin/bash
+# Collect miner status from the Vast VM and write status.json for the ops page.
+# Config in /etc/flop-ops.env: VM_SSH_HOST VM_SSH_PORT VM_SSH_KEY SPEND_SO_FAR ENDPOINT
+set -u
+. /etc/flop-ops.env 2>/dev/null || true
+SITE=/var/www/agentchainlab
+OUT="$SITE/status.json.tmp"
+now=$(date -u +'%Y-%m-%d %H:%M UTC')
+SSH="ssh -i ${VM_SSH_KEY:-/root/.ssh/flop_vast} -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyChecking=accept-new -p ${VM_SSH_PORT:-22} root@${VM_SSH_HOST:-127.0.0.1}"
+
+miner="provisioning"; miner_state="warn"
+gpu="—"; gpu_state=""
+cal="not started"; cal_state=""
+sess="—"; sess_state=""
+ep="${ENDPOINT:-pending}"; ep_state=""
+note=""
+
+if REMOTE=$($SSH 'bash -s' <<'EOS' 2>/dev/null
+gpu=$(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader 2>/dev/null | head -1)
+dock=$(docker ps --format '{{.Names}}:{{.Status}}' 2>/dev/null | tr '\n' ';')
+info=$(curl -s --max-time 5 http://127.0.0.1:8645/session/info 2>/dev/null || true)
+disk=$(df -h / | awk 'NR==2{print $4" free"}')
+echo "GPU=$gpu"
+echo "DOCKER=$dock"
+echo "DISK=$disk"
+echo "SESSION_INFO<<$info>>"
+EOS
+); then
+  gpu=$(echo "$REMOTE" | sed -n 's/^GPU=//p'); [ -n "$gpu" ] && gpu_state="ok" || gpu_state="bad"
+  miner=$(echo "$REMOTE" | sed -n 's/^DOCKER=//p'); [ -n "$miner" ] || miner="docker down"
+  info=$(echo "$REMOTE" | sed -n 's/^SESSION_INFO<<//;s/>>$//p')
+  if echo "$info" | grep -q '"is_ready"[ :]*true'; then cal="ready"; cal_state="ok";
+  elif echo "$info" | grep -q calibration; then cal="in progress"; cal_state="warn";
+  else cal="not calibrated"; fi
+  sess=$(echo "$info" | grep -oE '"sessions"[ :]*[0-9]+' | grep -oE '[0-9]+' || echo "0")
+  note=$(echo "$REMOTE" | sed -n 's/^DISK=//p')
+else
+  miner="unreachable"; miner_state="bad"; ep_state="bad"; note="ssh to VM failed"
+fi
+
+cat > "$OUT" <<JSON
+{"updated":"$now","miner":"$miner","miner_state":"$miner_state",
+"gpu":"$gpu","gpu_state":"$gpu_state",
+"calibration":"$cal","calibration_state":"$cal_state",
+"sessions":"$sess","sessions_state":"$sess_state",
+"spend":"${SPEND_SO_FAR:-unknown}","spend_state":"",
+"endpoint":"$ep","endpoint_state":"$ep_state","note":"$note"}
+JSON
+mv "$OUT" "$SITE/status.json"

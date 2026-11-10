@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(env)",
+      "Exec(curl)",
+      "Exec(mkdir)",
+      "Exec(wc)",
+      "Exec(cd)",
+      "Exec(python3)",
+      "Exec(ssh-keygen)",
+      "Exec(awk)",
+      "Exec(.)",
+      "Exec(seq)",
+      "Exec(head)",
+      "Exec(pip3 install)",
+      "Exec($V)",
+      "Exec(command)",
+      "Exec(/opt/homebrew/bin/python3.14)",
+      "Exec(vastai set)",
+      "Exec(vastai ssh-url)",
+      "Exec(ssh)",
+      "Exec(sleep)",
+      "Exec(vastai show)",
+      "Exec(vastai)",
+      "Exec(cat)",
+      "Exec(break)",
+      "Exec(ls)",
+      "Exec(sed)",
+      "Exec(grep)",
+      "Exec(find)",
+      "Exec(continue)",
+      "Exec(dig)",
+      "Exec(scp)",
+      "Exec(\"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser\")",
+      "Exec(date)",
+      "Exec(tar xzf)",
+      "Exec(git init)"
+    ]
+  }
+}
