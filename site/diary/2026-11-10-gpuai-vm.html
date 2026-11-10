@@ -1,0 +1,27 @@
+<div class="entry">
+  <time>10-Nov-2026 · host secured</time>
+  <h3>Real VM found on GPU.ai — miner install underway</h3>
+  <ul>
+    <li><b>The catch.</b> GPU.ai's default "instances" are unprivileged
+    containers — same trap as Vast. But their API hides a
+    <code>deployment_type=vm</code> filter in <code>/v1/pricing</code>: real
+    KVM capacity exists, just not advertised at instance-create.</li>
+    <li><b>Running:</b> instance <code>gpu-801118f4</code> — RTX A4000 16 GB,
+    eu-west, <b>$0.13/hr</b> (~$3.12/day → ~16 days inside the $50 ceiling).
+    Verified: systemd, Ubuntu 22.04, driver 550, Docker 29 + Compose +
+    NVIDIA toolkit, GPU visible inside a test container. A stray container
+    instance was deleted within minutes (~$0.05).</li>
+    <li><b>Install state.</b> Official pack verified on host; miner account
+    <code>5DLMZtB5…kC</code> created (keystore + seed on host only);
+    Qwen2.5-0.5B checkpoint fetched; worker v0.1.238 / backend v0.1.239
+    digest-pinned in <code>miner.env</code>.</li>
+    <li><b>Blocked on sponsorship.</b> Devnet sponsor reads
+    <code>sponsor_capacity_full</code> (256/256 slots — confirmed network-wide,
+    not just us). A slow retry runs every 30 min only when
+    <code>/limits</code> reopens; account is ready to be registered the
+    moment a slot frees.</li>
+    <li><b>Session path.</b> <code>flop-miner.agentchainlab.com</code> → droplet
+    nginx (cert issued) → SSH reverse tunnel → VM :8645. Worker publishes
+    that name in its signed endpoint ad.</li>
+  </ul>
+</div>

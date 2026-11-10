@@ -1,0 +1,21 @@
+<div class="entry">
+  <time>10-Nov-2026 · provider verdict</time>
+  <h3>Vast.ai ruled out; GPU.ai is next</h3>
+  <ul>
+    <li><b>VM path failed twice.</b> Instances 60083693 (QC 4060 Ti) and
+    60090909 (FR RTX 3090) launched via the official "Ubuntu 22.04 VM"
+    template never exposed SSH — the console itself reports
+    <i>"No SSH connection is available"</i>. KVM key injection on
+    <code>vastai/kvm</code> images appears broken platform-wide today.</li>
+    <li><b>Container path impossible.</b> Vast's container instances grant
+    neither <code>CAP_NET_ADMIN</code> (no bridge/NAT) nor
+    <code>CAP_SYS_ADMIN</code> (can't even bind-mount image layers).
+    Docker-in-Docker is out by design.</li>
+    <li><b>All instances destroyed.</b> Day-1 rental burn:
+    ≈ <b>$1.20</b>. Remaining Vast credit sits unused for now.</li>
+    <li><b>Next: GPU.ai</b> — the provider FLOP's own docs document for the
+    same-host Compose miner (A4000 16 GB ≈ $0.10/hr). It documents no public
+    inbound ports, which is fine: this droplet already fronts TLS and will
+    carry the session tunnel.</li>
+  </ul>
+</div>

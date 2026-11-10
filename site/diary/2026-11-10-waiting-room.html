@@ -1,0 +1,27 @@
+<div class="entry">
+  <time>10-Nov-2026 · evening</time>
+  <h3>Waiting room: sponsor queue confirmed, alerts armed, form filed</h3>
+  <ul>
+    <li><b>Direct confirmation.</b> Fired <code>sponsor.sh</code> by hand —
+    faucet answers <code>429 sponsor_capacity_full</code> with
+    <code>action: report_to_operator</code>. Nothing stuck on our side; the
+    30-min retry cron stays armed and claims the first open slot. The
+    <code>automatic</code> quota (55/100 uncalibrated) has room, so approval
+    should be instant once a signer position frees.</li>
+    <li><b>Form filed.</b> Submitted FLOP's official Miner Interest Form —
+    the plausible admission channel while the open faucet is saturated. If
+    they respond, the ask is an operator grant for
+    <code>5DLMZtB5…kC</code>.</li>
+    <li><b>Email alerts live.</b> The collector now diffs a state signature
+    (miner|gpu|calibration|sessions) each run and emails via Resend on any
+    change — failures, recovery, calibration starting (the
+    sponsorship-landed signal), first session going live. Test email
+    delivered.</li>
+    <li><b>Droplet housekeeping.</b> Host renamed yumibot → agentchainlab;
+    dead Adam &amp; Eve units, an orphaned cert, redis and ~3.8&nbsp;GB of
+    old systemd journal purged. Disk now 4.4&nbsp;G/48&nbsp;G.</li>
+    <li><b>Burn check.</b> ≈ $2 total logged so far + gpu.ai meter at
+    $3.12/day while the GPU idles on the sponsor queue — still inside the
+    $50 ceiling, but the clock is the enemy now.</li>
+  </ul>
+</div>
