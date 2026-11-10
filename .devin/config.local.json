@@ -45,7 +45,8 @@
       "Exec(openssl)",
       "Exec(printf)",
       "Exec(rm)",
-      "Exec($SSH)"
+      "Exec($SSH)",
+      "Exec(file)"
     ]
   }
 }
