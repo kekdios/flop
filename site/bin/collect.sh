@@ -27,12 +27,13 @@ echo "SESSION_INFO<<$info>>"
 EOS
 ); then
   gpu=$(echo "$REMOTE" | sed -n 's/^GPU=//p'); [ -n "$gpu" ] && gpu_state="ok" || gpu_state="bad"
-  miner=$(echo "$REMOTE" | sed -n 's/^DOCKER=//p'); [ -n "$miner" ] || miner="docker down"
+  miner=$(echo "$REMOTE" | sed -n 's/^DOCKER=//p')
+  if [ -n "$miner" ]; then miner_state="ok"; else miner="docker down"; miner_state="bad"; fi
   info=$(echo "$REMOTE" | sed -n 's/^SESSION_INFO<<//;s/>>$//p')
   if echo "$info" | grep -q '"is_ready"[ :]*true'; then cal="ready"; cal_state="ok";
   elif echo "$info" | grep -q calibration; then cal="in progress"; cal_state="warn";
   else cal="not calibrated"; fi
-  sess=$(echo "$info" | grep -oE '"sessions"[ :]*[0-9]+' | grep -oE '[0-9]+' || echo "0")
+  sess=$(echo "$info" | grep -oE '"sessions"[ :]*[0-9]+' | grep -oE '[0-9]+' | head -1); sess=${sess:-0}
   note=$(echo "$REMOTE" | sed -n 's/^DISK=//p')
 else
   miner="unreachable"; miner_state="bad"; ep_state="bad"; note="ssh to VM failed"
@@ -47,3 +48,15 @@ cat > "$OUT" <<JSON
 "endpoint":"$ep","endpoint_state":"$ep_state","note":"$note"}
 JSON
 mv "$OUT" "$SITE/status.json"
+
+# Email alert when the state signature changes (miner|gpu|calibration|sessions).
+# Signature stored in /var/lib/flop-ops/last-sig; first run seeds it silently.
+STATE_DIR=/var/lib/flop-ops
+case "$sess" in *[1-9]*) sess_bucket=live;; *) sess_bucket=idle;; esac
+sig="$miner_state|$gpu_state|$cal|$sess_bucket"
+mkdir -p "$STATE_DIR"
+prev=$(cat "$STATE_DIR/last-sig" 2>/dev/null || true)
+if [ "$sig" != "$prev" ]; then
+  echo "$sig" > "$STATE_DIR/last-sig"
+  [ -n "$prev" ] && /usr/local/lib/flop-ops/notify.py "$prev" "$sig" >>/var/log/flop-ops-notify.log 2>&1 &
+fi
