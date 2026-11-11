@@ -76,6 +76,15 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 - `/etc/flop-ops.env` on the droplet — full runtime config incl. Resend +
   NANOGPT_API_KEY + ASK_MODEL
 
+## Procedures
+- **Blue-green miner swap**: new GPU VM → install pack + copy `miner.env`,
+  `signer`, `miner-key.json`, `session-keys/` (signer = on-chain identity) →
+  model + containers up + verify → repoint droplet's SSH reverse tunnel for
+  flop-miner.agentchainlab.com to the new VM (that flip IS the cutover) →
+  verify ad republishes + status.json green → retire old VM after soak.
+  ~30–60 min total, mostly model download. Don't run two workers on one
+  signer for more than the flip window; in-flight sessions die on cutover.
+
 ## Git workflow
 - User reviews and pushes via **GitHub Desktop**. Agent should commit locally
   with a descriptive message but never push.

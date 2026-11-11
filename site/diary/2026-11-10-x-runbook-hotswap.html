@@ -1,0 +1,24 @@
+<div class="entry">
+  <time>10-Nov-2026 · future note</time>
+  <h3>Runbook: blue-green miner swap (for when we have traffic worth protecting)</h3>
+  <ul>
+    <li><b>Idea.</b> Build the replacement alongside the live miner, then move
+    the pointer — never rebuild under load. The public endpoint
+    (<code>flop-miner.agentchainlab.com</code>) stays constant; the droplet's
+    SSH reverse tunnel is the switch.</li>
+    <li><b>Steps.</b> ① new GPU instance + docker/NVIDIA toolkit (~10 min)
+    ② install pack + copy <code>miner.env</code>, <code>signer</code>,
+    <code>miner-key.json</code>, <code>session-keys/</code> — the signer is the
+    on-chain identity ③ fetch model, containers up, hash verified
+    ④ warm-check <code>:8645</code> ⑤ repoint the droplet tunnel to the new VM
+    — that flip <i>is</i> the switch ⑥ verify endpoint ad re-publishes +
+    <code>status.json</code> green ⑦ retire old VM only after a soak — rollback
+    is one tunnel flip back.</li>
+    <li><b>Caveats.</b> Don't run both workers on one signer for long
+    (overlapping declarations) — minutes of overlap during the flip is fine.
+    In-flight sessions die on cutover: devnet don't care, mainnet pick a quiet
+    window.</li>
+    <li><b>Time cost.</b> ~30–60 min mostly model download; the switch itself
+    is one command on the droplet.</li>
+  </ul>
+</div>
