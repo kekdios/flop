@@ -1,6 +1,9 @@
 #!/bin/bash
 # Collect miner status from the Vast VM and write status.json for the ops page.
-# Config in /etc/flop-ops.env: VM_SSH_HOST VM_SSH_PORT VM_SSH_KEY SPEND_SO_FAR ENDPOINT
+# Config in /etc/flop-ops.env: VM_SSH_HOST VM_SSH_PORT VM_SSH_KEY ENDPOINT
+#   SPEND_SINCE (ISO time the GPU started billing) + SPEND_RATE_HR (usd/hr) +
+#   SPEND_BASE (any earlier spend) auto-accrue the spend card; if unset,
+#   static SPEND_SO_FAR is used instead.
 set -u
 . /etc/flop-ops.env 2>/dev/null || true
 SITE=/var/www/agentchainlab
@@ -45,13 +48,22 @@ else
   miner="unreachable"; miner_state="bad"; ep_state="bad"; note="ssh to VM failed"
 fi
 
+# Spend accrues continuously: base + rate * elapsed since SPEND_SINCE.
+if [ -n "${SPEND_SINCE:-}" ] && [ -n "${SPEND_RATE_HR:-}" ]; then
+  spend=$(awk -v iso="$SPEND_SINCE" -v r="$SPEND_RATE_HR" -v b="${SPEND_BASE:-0}" 'BEGIN{
+    c="date -d \"" iso "\" +%s"; c|getline t0; close(c);
+    printf "$%.2f", b + r*(systime()-t0)/3600 }')
+else
+  spend="${SPEND_SO_FAR:-unknown}"
+fi
+
 cat > "$OUT" <<JSON
 {"updated":"$now","miner":"$miner","miner_state":"$miner_state",
 "gpu":"$gpu","gpu_state":"$gpu_state",
 "model":"$model","model_state":"$model_state",
 "calibration":"$cal","calibration_state":"$cal_state",
 "sessions":"$sess","sessions_state":"$sess_state",
-"spend":"${SPEND_SO_FAR:-unknown}","spend_state":"",
+"spend":"$spend","spend_state":"",
 "kibble":"$kib","kibble_state":"$kib_state",
 "endpoint":"$ep","endpoint_state":"$ep_state","note":"$note"}
 JSON
