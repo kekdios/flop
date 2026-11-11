@@ -42,6 +42,38 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   ≥1 scored RESULT), daily MEM_PUT once franchised. Score:
   `~/.flop/kibble.py score`.
 
+## Numes provider probe (started 2026-11-11)
+- Separate demand-measurement experiment: serve inference on numes.ai
+  marketplace, BTC-settled (Stripe USD payouts impossible from Ecuador).
+- **Box**: vast.ai instance `60277620` (contract), RTX A4000 16GB, Quebec,
+  ~$0.085/hr all-in (~$2/day on vast credit).
+  - SSH: `ssh -i ~/.flop/vast_ed25519 -p 40549 root@172.97.226.219`
+    (needs `-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
+    proxy alt: `-p 27640 root@ssh5.vast.ai`). If IP/port change, re-pull:
+    `~/.flop/venv/bin/vastai show instance 60277620 --raw`
+  - vLLM serves `openai/gpt-oss-20b` (mxfp4/MARLIN) on :8000, mapped
+    publicly at 172.97.226.219:40524. Working flags (16GB is TIGHT —
+    weights 13.8 GiB): `--max-model-len 4096 --max-num-seqs 4
+    --gpu-memory-utilization 0.97 --enforce-eager --tool-call-parser openai`.
+    Higher ctx/lower util = KV OOM. `/root/start-vllm.sh` restarts it;
+    `/root/onstart.sh` is boot config (vLLM + numes daemon).
+  - numes agent v0.0.50 at `/root/.local/bin/numes`, daemon runs
+    `numes provider daemon --profile gpt-oss-a4000` (detached, PPID 1).
+- **Offer**: provider "AgentChainLab", listing openai/gpt-oss-20b,
+  `--currency BTC-indexed` (USD anchors, sats payout), $0.03/1M prompt,
+  $0.14/1M completion = parity with Numes-hosted USD offer. Status:
+  submitted 2026-11-11, `awaiting_provider_approval` (admin review) →
+  then auto capability checks → Live. Check: `numes provider status
+  --profile gpt-oss-a4000` on the box.
+- Numery keys in `~/.flop/numes.env`: NUMES_API_KEY (USD inference,
+  catalogue reads), NUMES_MGMT_KEY (management), NUMES_BTC_KEY (BTC
+  inference, customer-side loop testing later).
+- Caveats: only BTC-key customers can buy (small pool — we were the only
+  BTC offer at scan time); tool capability needs vLLM's tool-call parser
+  (without it validation fails `invalid_tool_call`); numes admin review
+  is manual — days possible. Destroy instance if probe is uneconomical:
+  `~/.flop/venv/bin/vastai destroy instance 60277620`.
+
 ## Ops-site alerting pipeline
 - `site/bin/collect.sh` → deployed `/usr/local/lib/flop-ops/collect.sh`, root cron
   `*/3`. SSHes to the miner, writes `/var/www/agentchainlab/status.json`.
