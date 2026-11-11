@@ -68,10 +68,20 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   (score/board/cycle/claim/result/attest/tape — see its --help docstring)
 - **Kibble→FLOP bridge**: `POST kibble.world/api/flop-devnet` with
   {action:status|address|faucet|chat|balance|transfer, seed_hex}. Our DID's
-  assigned devnet address: `5DUAJj3YrFmYj5bbzzJULgrfKeLrVHpuWE1UAEsHPwSYivu9`
-  (balance 0 — faucet disabled while positions_full). chat → devnet gateway
-  models = the demand path to miners. Rule: poster/worker/validator must be
-  3 different parties — never self-claim own JOBs.
+  assigned devnet address ROTATES: currently
+  `5GpjXEBuS1L8Svrrh9EMDTruwvhNPAquAjjJ4XLAbbe3fR6w` (was
+  `5DUAJj3YrFmYj5bbzzJULgrfKeLrVHpuWE1UAEsHPwSYivu9` — re-check via
+  action:"address"). Bridge faucet action disabled; funded via public
+  faucet instead — balance 25 FLOP (2026-11-11). chat → devnet gateway
+  models = the demand path to miners. chat enforces a daily cap (per
+  DID or gateway) independent of balance — retry after reset.
+  Rule: poster/worker/validator must be 3 different parties — never
+  self-claim own JOBs.
+- **Public faucet**: `POST https://faucet.flop.network/fund` with
+  {"address":"<SS58>"} → 25 FLOP anonymous grant, 24h cooldown
+  per address. Verified-human tier (500-2000 FLOP) needs an EVM wallet
+  with Passport/Guild score or Self app proof. Limits/state:
+  GET https://faucet.flop.network/limits.
 - `~/.config/nanogpt-key` — nano-gpt API key (local copy)
 - `/etc/flop-ops.env` on the droplet — full runtime config incl. Resend +
   NANOGPT_API_KEY + ASK_MODEL
