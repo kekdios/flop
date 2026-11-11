@@ -5,15 +5,26 @@
 import json
 import os
 import re
+import time
 import urllib.request
 
 ENV_PATH = "/etc/flop-ops.env"
 STATE = "/var/lib/flop-ops/kibble-watch.json"
+LOG = "/var/log/kibble-watch.log"
 DID = "did:key:z6MkgjCi5g5KjEphiSEe7SneiatLqPEPrRgD4chXbMNQNNMt"
 API = "https://kibble.world/api"
 ROOM = "https://technocore.chat/r/kibble"
 UA = {"User-Agent": "flop-ops/1.0"}
 SUBJ_PREFIX = "[kibble] "
+
+
+def log(msg):
+    try:
+        with open(LOG, "a") as f:
+            f.write(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                    + " " + msg + "\n")
+    except OSError:
+        pass
 
 
 def load_env(path):
@@ -121,41 +132,59 @@ def main():
         terms = (sc.get("breakdown") or {}).get("terms") or {}
         prev = state.get("score")
         if prev is not None and score != prev:
+            log("score %s -> %s" % (prev, score))
             alerts.append(("score %s -> %s" % (prev, score),
                            "Score moved.\n\nterms: %s\n" % json.dumps(terms)))
         state["score"] = score
-    except Exception:
-        pass
+    except Exception as e:
+        log("score check failed: %r" % e)
 
-    # 2) onramp / validator-magnet openings (time-sensitive)
+    # 2) onramp / validator-magnet openings (time-sensitive).
+    # Dedupe by job id: these jobs close and repost under new ids, so an
+    # open/closed flag re-fires on every repost. The on-ramp only needs
+    # ONE bootstrap RESULT — after that, new onramp jobs are for other
+    # agents and are suppressed. The magnet reposts constantly, so its
+    # alert is rate-limited to once per 24h.
     try:
         st = get(API + "/status")
+        seen = state.get("seen_jobs") or []
         for key_, label in (("franchise_onramp", "franchise on-ramp job"),
                             ("review_magnet", "validator-magnet job")):
             info = st.get(key_) or {}
-            open_now = bool(info.get("open"))
-            if open_now and not state.get(key_):
-                if key_ == "franchise_onramp":
-                    # Zero-risk automation: claim + deliver the bootstrap result.
-                    jid = info.get("last_job_id", "")
-                    if jid and env.get("KIBBLE_SEED"):
-                        act(env, "CLAIM v1 | %s | worker" % jid)
-                        act(env, ONRAMP_RESULT % jid)
-                        alerts.append(("%s OPEN — auto-claimed %s"
-                                       % (label, jid),
-                                       "Watcher auto-claimed the on-ramp job "
-                                       "and posted the bootstrap RESULT.\n"
-                                       "No action needed — watch for ACCEPT."))
-                        state[key_] = open_now
-                        continue
+            jid = info.get("last_job_id", "")
+            state[key_] = bool(info.get("open"))
+            if not info.get("open") or not jid or jid in seen:
+                continue
+            seen.append(jid)
+            if key_ == "franchise_onramp":
+                if state.get("onramp_done"):
+                    continue  # already delivered our bootstrap RESULT
+                if env.get("KIBBLE_SEED"):
+                    act(env, "CLAIM v1 | %s | worker" % jid)
+                    act(env, ONRAMP_RESULT % jid)
+                    state["onramp_done"] = True
+                    log("auto-claimed onramp job %s + posted RESULT" % jid)
+                    alerts.append(("%s OPEN — auto-claimed %s"
+                                   % (label, jid),
+                                   "Watcher auto-claimed the on-ramp job "
+                                   "and posted the bootstrap RESULT.\n"
+                                   "No action needed — watch for ACCEPT."))
+                else:
+                    alerts.append(("%s OPEN" % label,
+                                   "%s opened on the kibble board.\n"
+                                   "Claim window is finite — run "
+                                   "~/.flop/kibble.py cycle to grab it."
+                                   % label))
+            elif (time.time() - state.get("magnet_alert_ts", 0)) > 86400:
+                state["magnet_alert_ts"] = time.time()
                 alerts.append(("%s OPEN" % label,
-                               "%s opened on the kibble board.\n"
-                               "Claim window is finite — run "
-                               "~/.flop/kibble.py cycle to grab it."
-                               % label))
-            state[key_] = open_now
-    except Exception:
-        pass
+                               "%s opened on the kibble board (%s delivered "
+                               "jobs need ATTESTs).\nClaim window is finite "
+                               "— run ~/.flop/kibble.py cycle to grab it."
+                               % (label, info.get("needs_attest", "?"))))
+        state["seen_jobs"] = seen[-40:]
+    except Exception as e:
+        log("status check failed: %r" % e)
 
     # 3) new tape lines mentioning us (ATTEST on our jobs, replies)
     try:
@@ -175,18 +204,20 @@ def main():
             last = max(last, m["seq"])
         state["last_mention_seq"] = last
         if mentions:
+            log("%d new tape line(s) mentioning our DID" % len(mentions))
             summary = llm_ask(env, "New kibble tape lines touching our DID:",
                               "\n".join(mentions[:15]))
             alerts.append(("%d new tape line(s) for our DID"
                            % len(mentions),
                            (summary + "\n\n---\n" if summary else "")
                            + "\n\n".join(mentions[:15])))
-    except Exception:
-        pass
+    except Exception as e:
+        log("tape check failed: %r" % e)
 
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
     json.dump(state, open(STATE, "w"))
     for subject, body in alerts:
+        log("email: %s" % subject)
         send(env, subject, body + "\n\nDID: %s\n" % DID)
 
 
