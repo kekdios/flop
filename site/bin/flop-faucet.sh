@@ -17,12 +17,16 @@ addr=$(curl -s -m 30 -X POST https://kibble.world/api/flop-devnet \
   -d "{\"action\":\"address\",\"seed_hex\":\"$KIBBLE_SEED\"}" \
   | python3 -c 'import json,sys; print(json.load(sys.stdin).get("address",""))' 2>/dev/null)
 
-if [ -z "$addr" ]; then
+# Also claim for the operator's Talisman wallet (self-custodied).
+[ -n "$addr" ] && addr="$addr ${PERSONAL_ADDR:-}"
+
+if [ -z "${addr// /}" ]; then
   echo "$(ts) could not resolve bridge address" >> "$LOG"; exit 1
 fi
 
+for a in $addr; do
 resp=$(curl -s -m 30 -X POST https://faucet.flop.network/fund \
-  -H 'Content-Type: application/json' -d "{\"address\":\"$addr\"}")
+  -H 'Content-Type: application/json' -d "{\"address\":\"$a\"}")
 
 # Cooldown race: cron fires at a fixed time but the 24h window slides —
 # retry once after the faucet's Retry-After hint.
@@ -31,8 +35,9 @@ if ! echo "$resp" | grep -q '"success": *true'; then
   if [ "${wait:-0}" -gt 0 ] && [ "$wait" -lt 900 ]; then
     sleep "$wait"
     resp=$(curl -s -m 30 -X POST https://faucet.flop.network/fund \
-      -H 'Content-Type: application/json' -d "{\"address\":\"$addr\"}")
+      -H 'Content-Type: application/json' -d "{\"address\":\"$a\"}")
   fi
 fi
 
-echo "$(ts) $addr -> $resp" >> "$LOG"
+echo "$(ts) $a -> $resp" >> "$LOG"
+done
