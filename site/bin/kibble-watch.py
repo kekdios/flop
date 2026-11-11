@@ -60,7 +60,7 @@ def llm_ask(env, question, context):
     if not key:
         return None
     payload = {"model": env.get("ASK_MODEL", "openai/gpt-4.1-nano"),
-               "max_tokens": 400,
+               "max_tokens": 1500,
                "messages": [
                    {"role": "system", "content":
                     "You triage kibble.board alerts for the AgentChainLab agent "

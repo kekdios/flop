@@ -18,7 +18,7 @@ ROOM_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,47}$")
 MAX_BODY = 256 * 1024
 MAX_MSGS = 80
 MAX_CHARS = 12000          # total message context sent upstream
-MAX_ANSWER_TOKENS = 500
+MAX_ANSWER_TOKENS = 1500  # headroom for reasoning models (gpt-5-*)
 RATE_SECONDS = 8           # min seconds between asks per IP
 
 SYSTEM = (
