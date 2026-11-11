@@ -50,7 +50,8 @@
       "Exec(~/.flop/venv/bin/python)",
       "Exec(chmod)",
       "Exec(~/.flop/kibble.py tape)",
-      "Exec(~/.flop/kibble.py score)"
+      "Exec(~/.flop/kibble.py score)",
+      "Exec(md5)"
     ]
   }
 }
