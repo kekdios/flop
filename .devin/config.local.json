@@ -51,7 +51,11 @@
       "Exec(chmod)",
       "Exec(~/.flop/kibble.py tape)",
       "Exec(~/.flop/kibble.py score)",
-      "Exec(md5)"
+      "Exec(md5)",
+      "Exec(source)",
+      "Exec(node)",
+      "Exec(timeout)",
+      "Exec(npm init)"
     ]
   }
 }
