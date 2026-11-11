@@ -81,7 +81,27 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   {"address":"<SS58>"} → 25 FLOP anonymous grant, 24h cooldown
   per address. Verified-human tier (500-2000 FLOP) needs an EVM wallet
   with Passport/Guild score or Self app proof. Limits/state:
-  GET https://faucet.flop.network/limits.
+  GET https://faucet.flop.network/limits. Daily auto-claim for the
+  bridge address runs on the droplet: `site/bin/flop-faucet.sh` →
+  `/usr/local/lib/flop-ops/flop-faucet.sh`, cron `15 22 * * *`,
+  log `/var/log/flop-faucet.log` (resolves current address first —
+  handles rotation).
+
+## FLOP key/control model (verified 2026-11-11)
+- Bridge agent address is **bridge-custodial**: ed25519 pubkey of our
+  kibble seed SS58-encodes to `5Cq2JZs8…`, NOT the assigned address —
+  the bridge holds the key and signs for us via seed_hex auth. FLOP
+  there = inference budget (chat), not withdrawable: transfer action
+  caps at 0.001 FLOP. Treat it as spendable compute credit, not a wallet.
+- **Keys we DO hold**: miner identity on the GPU box —
+  `/opt/flop-miner/signer` + `miner-key.json` (miner address
+  `5DLMZtB5…SkC`). That signer is the on-chain miner identity; whoever
+  holds it IS the miner. Back it up before any hot-swap.
+- **Live FLOP (post-devnet)**: same model — control = key possession.
+  Miner earnings accrue to the miner address (its key lives on the
+  GPU host; keep `signer`+`miner-key.json` safe). A personal wallet =
+  generate our own sr25519/ed25519 keypair in Polkadot.js/Talisman —
+  only ever fund addresses whose keys we generated ourselves.
 - `~/.config/nanogpt-key` — nano-gpt API key (local copy)
 - `/etc/flop-ops.env` on the droplet — full runtime config incl. Resend +
   NANOGPT_API_KEY + ASK_MODEL
