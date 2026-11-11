@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgentChainLab — FLOP devnet wallet</title>
+<meta name="description" content="Live FLOP devnet balances for AgentChainLab addresses." />
+<link rel="icon" type="image/png" href="/assets/icon_flask.png" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg-main: #0a1a29;
+  --bg-card: #0f2840;
+  --bg-input: #071521;
+  --accent-primary: #228B22;
+  --accent-secondary: #2e9d2e;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B0B3B8;
+  --text-muted: #6B6F76;
+  --border-subtle: rgba(31, 74, 85, 0.6);
+  --warn: #e8a33d;
+  --bad: #e05563;
+  --font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh; font-family: var(--font-family); font-size: 14px;
+  background: var(--bg-main); color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+.topHeader {
+  display: flex; align-items: center;
+  padding: 14px 22px; border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+.brandLink { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brandLogo { height: 34px; width: auto; display: block; }
+.brandName { color: var(--text-primary); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+.brandSub { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+.backBtn {
+  margin-left: auto; display: inline-block;
+  background: var(--bg-input); border: 1px solid var(--border-subtle);
+  color: var(--text-secondary); border-radius: 999px;
+  padding: 7px 16px; font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.backBtn:hover { color: var(--text-primary); border-color: var(--accent-secondary); }
+
+main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
+
+.liveRow { display: flex; align-items: center; gap: 8px; margin: 14px 0 16px; }
+.pulseDot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-secondary);
+  box-shadow: 0 0 0 0 rgba(46,157,46,.6); animation: pulse 2s infinite;
+}
+.pulseDot.warn { background: var(--warn); box-shadow: none; animation: none; }
+.pulseDot.down { background: var(--bad); box-shadow: none; animation: none; }
+@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(46,157,46,.5)} 70%{box-shadow:0 0 0 9px rgba(46,157,46,0)} 100%{box-shadow:0 0 0 0 rgba(46,157,46,0)} }
+.liveText { color: var(--text-secondary); font-size: 13px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 12px; padding: 14px 16px;
+}
+.card .lbl { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.card .bal { font-size: 26px; font-weight: 700; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.card .bal .unit { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+.card .addr { color: var(--text-muted); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+.card .role { color: var(--text-secondary); font-size: 11.5px; margin-top: 6px; }
+
+.total {
+  margin: 14px 0 0; background: var(--bg-input); border: 1px solid var(--border-subtle);
+  border-radius: 12px; padding: 14px 16px; display: flex; align-items: baseline; gap: 10px;
+}
+.total .lbl { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.total .bal { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.total .unit { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+
+.note { color: var(--text-muted); font-size: 12px; margin: 16px 0 0; line-height: 1.6; }
+.note a { color: var(--accent-secondary); text-decoration: none; }
+.note code { background: var(--bg-input); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+.statusline { color: var(--text-muted); font-size: 12px; margin: 10px 0 0; }
+.statusline a { color: var(--accent-secondary); text-decoration: none; }
+</style>
+</head>
+<body>
+<header class="topHeader">
+  <a href="/" class="brandLink">
+    <img src="/assets/agentchainlab_nb.png" alt="AgentChainLab" class="brandLogo" />
+    <span class="brandName">AgentChainLab</span>
+    <span class="brandSub">/ FLOP devnet wallet</span>
+  </a>
+  <a href="/" class="backBtn">← Back</a>
+</header>
+<main>
+  <div class="liveRow">
+    <span class="pulseDot" id="live-dot"></span>
+    <span class="liveText" id="status">connecting to devnet…</span>
+  </div>
+
+  <div class="cards" id="cards"></div>
+  <div class="total" id="total" style="display:none">
+    <span class="lbl">Total across addresses</span>
+    <span class="bal" id="total-bal">—</span>
+    <span class="unit">FLOP</span>
+  </div>
+
+  <p class="note">
+    Devnet tokens have no monetary value and cannot be sold — they exist
+    for testing only. The <b>bridge</b> address is custodial (spendable
+    on gateway chat only); <b>wallet</b> is self-custodied in Talisman;
+    <b>miner</b> is the on-chain miner identity; <b>stale</b> is the
+    previously assigned bridge address.
+    Live data via <code>wss://rpc.devnet.flop.network</code>; when the
+    node is unreachable this page falls back to the last droplet snapshot.
+    Daily 25 FLOP claims: <code>/var/log/flop-faucet.log</code> on the droplet.
+  </p>
+  <p class="statusline">
+    Back to the <a href="/">ops board</a>.
+  </p>
+</main>
+<script>
+(function () {
+  var RPC = 'wss://rpc.devnet.flop.network';
+  // Substrate System.Account storage prefix (twox128 pairs) + per-account
+  // blake2_128_concat suffixes, precomputed for our fixed addresses.
+  var ACCOUNTS = [
+    { label: 'wallet', role: 'Talisman — self-custodied',
+      address: '5H1E2XQ3VhTt9WdwxFQcipBGgD67FqjXfHSnvMnWQKgPsUNS',
+      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da9273bbc15d1b173316d77bf9c793d7d9bda85bf279364657328d7594cd4f004b5f444aec824cff0f6f531331cf34d2f69' },
+    { label: 'bridge', role: 'kibble bridge — custodial, inference budget',
+      address: '5GpjXEBuS1L8Svrrh9EMDTruwvhNPAquAjjJ4XLAbbe3fR6w',
+      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da992190efa49d1cf443947447c97bcc17ed28555fc48db75995455e182f82e9081d3239d5ad4c17e46a131296c249d5572' },
+    { label: 'miner', role: 'miner identity — key on GPU host',
+      address: '5DLMZtB5it7s6DZRmd98ABzfY8zPx9JBAAcvCtgXTL4ttSkC',
+      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da91f95bb195b7b85ac07004c4c70fe4a91382bdc149738d2ec15755be862988531ec624cf6c76ff0a4a8fe20441c17d30f' },
+    { label: 'stale', role: 'previous bridge assignment — stranded balance',
+      address: '5DUAJj3YrFmYj5bbzzJULgrfKeLrVHpuWE1UAEsHPwSYivu9',
+      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da957aba76f3ad473e7d497c1ac42cd387a3e1fe9f4d8819b99d1ebed71dd178cf31b3ebd2b2d309db8993d5806e8d6e054' }
+  ];
+
+  var statusEl = document.getElementById('status');
+  var dotEl = document.getElementById('live-dot');
+  var cardsEl = document.getElementById('cards');
+  var totalEl = document.getElementById('total');
+  var totalBal = document.getElementById('total-bal');
+  var balances = {};   // label -> FLOP number or null
+
+  function setStatus(s, cls) {
+    statusEl.textContent = s;
+    dotEl.className = 'pulseDot' + (cls ? ' ' + cls : '');
+  }
+
+  function hexBytes(hex) {
+    var out = new Uint8Array((hex.length - 2) / 2);
+    for (var i = 0; i < out.length; i++)
+      out[i] = parseInt(hex.substr(2 + i * 2, 2), 16);
+    return out;
+  }
+
+  // SCALE-decode AccountInfo: 4x u32 then AccountData {free u128 LE,...}
+  function freeBalance(hexVal) {
+    var b = hexBytes(hexVal);
+    var free = 0n;
+    for (var i = 15; i >= 0; i--) free = (free << 8n) | BigInt(b[16 + i]);
+    return Number(free) / 1e18;
+  }
+
+  function render() {
+    cardsEl.innerHTML = '';
+    var total = 0, any = false;
+    ACCOUNTS.forEach(function (a) {
+      var bal = balances[a.label];
+      if (typeof bal === 'number') { total += bal; any = true; }
+      var c = document.createElement('div');
+      c.className = 'card';
+      var lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = a.label;
+      var v = document.createElement('div'); v.className = 'bal';
+      v.textContent = typeof bal === 'number' ? bal.toLocaleString(undefined, {maximumFractionDigits: 4}) : '—';
+      var u = document.createElement('span'); u.className = 'unit'; u.textContent = ' FLOP';
+      v.appendChild(u);
+      var ad = document.createElement('div'); ad.className = 'addr'; ad.textContent = a.address;
+      var r = document.createElement('div'); r.className = 'role'; r.textContent = a.role;
+      c.appendChild(lbl); c.appendChild(v); c.appendChild(ad); c.appendChild(r);
+      cardsEl.appendChild(c);
+    });
+    totalEl.style.display = any ? 'flex' : 'none';
+    totalBal.textContent = total.toLocaleString(undefined, {maximumFractionDigits: 4});
+  }
+
+  function fallback() {
+    fetch('/flop.json?_=' + Date.now()).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (d) {
+      (d.accounts || []).forEach(function (a) {
+        if (typeof a.free === 'number') balances[a.label] = a.free;
+      });
+      render();
+      setStatus('devnet RPC unreachable — showing droplet snapshot from ' +
+                (d.updated || '?') + ' (faucet ' + (d.faucet_health || '?') + ')', 'warn');
+    }).catch(function () {
+      setStatus('devnet RPC unreachable and no snapshot yet', 'down');
+    });
+  }
+
+  function live() {
+    var ws, settled = 0, id = 0, pending = {};
+    function call(method, params) {
+      return new Promise(function (res, rej) {
+        var rid = ++id; pending[rid] = {res: res, rej: rej};
+        ws.send(JSON.stringify({jsonrpc: '2.0', id: rid, method: method, params: params}));
+        setTimeout(function () { if (pending[rid]) { delete pending[rid]; rej(new Error('timeout')); } }, 12000);
+      });
+    }
+    try { ws = new WebSocket(RPC); } catch (e) { fallback(); return; }
+    var timer = setTimeout(function () { try { ws.close(); } catch (e) {} }, 15000);
+    ws.onerror = function () { clearTimeout(timer); fallback(); };
+    ws.onclose = function () {
+      clearTimeout(timer);
+      if (settled < ACCOUNTS.length) fallback();
+    };
+    ws.onmessage = function (ev) {
+      var m = JSON.parse(ev.data);
+      if (m.id !== undefined && pending[m.id]) { pending[m.id].res(m.result); delete pending[m.id]; }
+    };
+    ws.onopen = async function () {
+      setStatus('live on devnet — querying accounts…', '');
+      for (var i = 0; i < ACCOUNTS.length; i++) {
+        var a = ACCOUNTS[i];
+        try {
+          var val = await call('state_getStorage', [a.key]);
+          balances[a.label] = val ? freeBalance(val) : 0;
+        } catch (e) { /* leave as — */ }
+        settled++;
+        render();
+      }
+      var done = Object.keys(balances).length;
+      setStatus(done
+        ? 'live on devnet · ' + done + ' account' + (done === 1 ? '' : 's') + ' · updated ' + new Date().toUTCString().slice(17, 25) + ' UTC'
+        : 'connected but no account data', done ? '' : 'warn');
+      try { ws.close(); } catch (e) {}
+    };
+  }
+
+  render();
+  live();
+  setInterval(live, 60000);  // refresh each minute; falls back automatically
+})();
+</script>
+</body>
+</html>
