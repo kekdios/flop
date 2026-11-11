@@ -55,7 +55,14 @@
       "Exec(source)",
       "Exec(node)",
       "Exec(timeout)",
-      "Exec(npm init)"
+      "Exec(npm init)",
+      "Exec(pip3 list)",
+      "Exec(~/.flop/venv/bin/vastai set)",
+      "Exec(~/.flop/venv/bin/vastai search)",
+      "Exec(~/.flop/venv/bin/vastai create)",
+      "Exec(~/.flop/venv/bin/vastai show)",
+      "Exec(~/.flop/venv/bin/vastai attach)",
+      "Exec(~/.flop/venv/bin/vastai)"
     ]
   }
 }
