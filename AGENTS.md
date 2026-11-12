@@ -46,6 +46,16 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   has `automatic_full`; capacity can sell out again so keep the retry).
   `*/3` runs `health.sh`.
 - Miner address: `5DLMZtB5it7s6DZRmd98ABzfY8zPx9JBAAcvCtgXTL4ttSkC`
+- **Ghost tasks** = the protocol's own synthetic work: after registration
+  the core host fires an encrypted burst of micro-benchmarks at the new
+  miner (X25519 ghost key decrypts them via the mailbox on the miner
+  port), each scored vs `gn_weight_expected`. Ours: 72 tasks, all
+  completed, blocks 3535729–3535939 → produced the "64 verified jobs →
+  cap 3 GFLOP/s" calibration. They arrive in a per-miner burst then
+  stop (recent thousands all target other calibrating miners). Explorer
+  API: `/api/ghost-tasks` (no target filter — paginate). This is the
+  ONLY work flowing: ~7000 payment sessions exist but only 6 ever
+  spent (0.774 FLOP total); proofs24h 0. Ghost tasks ≠ paid work.
 - **Mining status page**: `/mining.html` ← `flop-mining.py` collector
   (`/usr/local/lib/flop-ops/`, cron `*/5`) → `/var/www/agentchainlab/
   mining.json`. Pulls auth'd `/session/info`, worker log events,
