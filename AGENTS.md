@@ -252,6 +252,16 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   log `/var/log/flop-faucet.log` (resolves current address first —
   handles rotation).
 
+## FLOP chain stack notes
+- Devnet self-identifies as **zkVerify** (chain properties) — FLOP is
+  built on Horizen Labs' zkVerify runtime (ZK-proof-verification
+  Substrate chain) + custom pallets (sessions, HTLCs, miner staking,
+  ghost tasks). Runtime spec numbers (1014020 etc.) are zkVerify's
+  versioning. Talisman custom-network config: RPC
+  `wss://rpc.devnet.flop.network`, symbol FLOP, 18 decimals, explorer
+  `https://explorer.devnet.flop.network`, testnet ✓, CheckMetadataHash
+  unchecked.
+
 ## FLOP key/control model (verified 2026-11-11)
 - Bridge agent address is **bridge-custodial**: ed25519 pubkey of our
   kibble seed SS58-encodes to `5Cq2JZs8…`, NOT the assigned address —
