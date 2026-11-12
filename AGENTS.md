@@ -128,9 +128,15 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   `5GpjXEBuS1L8Svrrh9EMDTruwvhNPAquAjjJ4XLAbbe3fR6w` (was
   `5DUAJj3YrFmYj5bbzzJULgrfKeLrVHpuWE1UAEsHPwSYivu9` — re-check via
   action:"address"). Bridge faucet action disabled; funded via public
-  faucet instead — balance 25 FLOP (2026-11-11). chat → devnet gateway
-  models = the demand path to miners. chat enforces a daily cap (per
-  DID or gateway) independent of balance — retry after reset.
+  faucet instead — balance rotates with the address (0 on
+  5EkGcLZf… as of 2026-11-12; claims land via flop-faucet.sh).
+  chat → devnet gateway models = the demand path to miners
+  (serves qwen/qwen2.5-0.5b-instruct; per-DID ~5s rate limit;
+  401 = unfunded address). **flop-chat.py** (droplet cron `23 */4`)
+  fires one small prompt per run — demand-side heartbeat that spends
+  the otherwise-stranded faucet FLOP on real miner sessions, builds
+  agent-side usage records, and probes gateway liveness.
+  Log: /var/log/flop-chat.log.
   Rule: poster/worker/validator must be 3 different parties — never
   self-claim own JOBs.
 - **Kibble job pipeline (2026-11-12)**: `kibble-jobs.py` runs as a
