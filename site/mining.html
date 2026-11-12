@@ -130,7 +130,7 @@ td.k { color: var(--text-muted); white-space: nowrap; width: 180px; }
 
     var cal = d.calibration || {}, sv = d.serving || {},
         idn = d.identity || {}, sp = d.sponsorship || {},
-        ch = d.chain || {}, wk0 = ch.work || {};
+        ch = d.chain || {}, wk0 = ch.work || {}, net = d.network || {};
     function fmt(n, dp) { return n == null ? '—' :
       Number(n).toLocaleString(undefined, {maximumFractionDigits: dp == null ? 2 : dp}); }
     var calCls = cal.ready ? 'ok' : (cal.state ? 'warn' : 'bad');
@@ -144,7 +144,11 @@ td.k { color: var(--text-muted); white-space: nowrap; width: 180px; }
       wk0.settled != null ? String(wk0.settled) : '0',
       (wk0.settled || 0) > 0 ? 'ok' : 'warn',
       'committed ' + (wk0.committed || 0) + ' · in-flight ' + (wk0.inFlight || 0) +
-      (ch.poui_rank != null ? ' · rank ' + ch.poui_rank : ''));
+      (ch.poui_rank != null ? ' · rank ' + ch.poui_rank : '') +
+      (net.sessions_htlc != null
+        ? ' · net: ' + fmt(net.sessions_htlc, 0) + ' session keys, ' +
+          (net.proofs_24h || 0) + ' proofs/24h'
+        : ''));
     cards += card('Calibration',
       cal.state ? esc(cal.state) : '—', calCls,
       (cal.cap_gflops != null ? 'cap ' + cal.cap_gflops + ' GFLOP/s' : '') +

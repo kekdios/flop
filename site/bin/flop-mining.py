@@ -180,6 +180,13 @@ def main():
                 headers={"User-Agent": "flop-ops/1.0"}), timeout=10).read())
         except Exception:
             pass
+    net = {}
+    try:
+        net = json.loads(urllib.request.urlopen(urllib.request.Request(
+            "https://explorer.devnet.flop.network/api/stats",
+            headers={"User-Agent": "flop-ops/1.0"}), timeout=10).read())
+    except Exception:
+        pass
 
     log = s.get("LOG", "")
     cal_log = re.search(
@@ -247,6 +254,12 @@ def main():
                 chain.get("declaredGpuInventory") is not None,
             "poui_rank": chain.get("pouiRank"),
             "work": chain.get("work") or {},
+        },
+        "network": {
+            "sessions_htlc": net.get("totalHTLCs"),
+            "sessions_active": net.get("activeHTLCs"),
+            "proofs_24h": net.get("proofs24h"),
+            "latest_block": net.get("latestBlockNumber"),
         },
         "sponsorship": sponsor,
         "hardware": {"gpu": s.get("GPU", "")},
