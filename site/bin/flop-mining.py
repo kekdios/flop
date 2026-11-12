@@ -16,6 +16,8 @@ from pathlib import Path
 ENV_FILE = "/etc/flop-ops.env"
 OUT = Path("/var/www/agentchainlab/mining.json")
 DRIFT_FILE = Path("/var/lib/flop-ops/last-drift")
+WORKSIG_FILE = Path("/var/lib/flop-ops/last-worksig")
+NOTIFY = "/usr/local/lib/flop-ops/notify.py"
 
 REMOTE_CMD = r"""
 tok=$(grep -m1 '^SESSION_AUTH_TOKEN=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2)
@@ -254,6 +256,19 @@ def main():
         "_info": info or prev.get("_info", {}),
     }
     OUT.write_text(json.dumps(data, indent=1) + "\n")
+
+    # Email on on-chain work-counter transitions (first run seeds silently).
+    w = data["chain"]["work"]
+    sig = "work " + "|".join(
+        str(w.get(k, 0)) for k in ("settled", "committed", "inFlight"))
+    try:
+        prev = WORKSIG_FILE.read_text().strip() \
+            if WORKSIG_FILE.exists() else None
+        WORKSIG_FILE.write_text(sig + "\n")
+        if prev is not None and prev != sig:
+            subprocess.run([NOTIFY, prev, sig], check=False)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
