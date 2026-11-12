@@ -27,10 +27,12 @@ dock=$(docker ps --format '{{.Names}}:{{.Status}}' 2>/dev/null | tr '\n' ';')
 info=$(curl -s --max-time 5 http://127.0.0.1:8645/session/info 2>/dev/null || true)
 disk=$(df -h / | awk 'NR==2{print $4" free"}')
 model=$(basename "$(grep -m1 '^MODEL_NAME=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2-)" 2>/dev/null)
+wimg=$(grep -m1 '^FLOP_WORKER_IMAGE=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2-)
 echo "GPU=$gpu"
 echo "DOCKER=$dock"
 echo "DISK=$disk"
 echo "MODEL=$model"
+echo "WORKER_IMG=$wimg"
 echo "SESSION_INFO<<$info>>"
 EOS
 ); then
@@ -47,6 +49,17 @@ EOS
 else
   miner="unreachable"; miner_state="bad"; ep_state="bad"; note="ssh to VM failed"
 fi
+
+# Worker image drift: compare pinned digest on the box against releases.json.
+# Stale worker images get fenced by runtime upgrades — alert via the sig path.
+drift=$(cat /var/lib/flop-ops/last-drift 2>/dev/null || echo "?")
+wimg=$(echo "${REMOTE:-}" | sed -n 's/^WORKER_IMG=//p')
+rel_img=$(curl -fsm10 https://flop.network/releases.json 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin).get("miner-worker",{}).get("image",""))' 2>/dev/null || true)
+if [ -n "$rel_img" ] && [ -n "$wimg" ]; then
+  if [ "$wimg" = "$rel_img" ]; then drift="current"; else drift="STALE"; fi
+  mkdir -p /var/lib/flop-ops; echo "$drift" > /var/lib/flop-ops/last-drift
+fi
+[ "$drift" = "STALE" ] && note="${note:+$note; }worker image stale — upgrade to releases.json pin"
 
 # Spend accrues continuously: base + rate * elapsed since SPEND_SINCE.
 if [ -n "${SPEND_SINCE:-}" ] && [ -n "${SPEND_RATE_HR:-}" ]; then
@@ -65,7 +78,7 @@ cat > "$OUT" <<JSON
 "sessions":"$sess","sessions_state":"$sess_state",
 "spend":"$spend","spend_state":"",
 "kibble":"$kib","kibble_state":"$kib_state",
-"endpoint":"$ep","endpoint_state":"$ep_state","note":"$note"}
+"endpoint":"$ep","endpoint_state":"$ep_state","drift":"$drift","note":"$note"}
 JSON
 mv "$OUT" "$SITE/status.json"
 
@@ -73,7 +86,7 @@ mv "$OUT" "$SITE/status.json"
 # Signature stored in /var/lib/flop-ops/last-sig; first run seeds it silently.
 STATE_DIR=/var/lib/flop-ops
 case "$sess" in *[1-9]*) sess_bucket=live;; *) sess_bucket=idle;; esac
-sig="$miner_state|$gpu_state|$cal|$sess_bucket"
+sig="$miner_state|$gpu_state|$cal|$sess_bucket|$drift"
 mkdir -p "$STATE_DIR"
 prev=$(cat "$STATE_DIR/last-sig" 2>/dev/null || true)
 if [ "$sig" != "$prev" ]; then

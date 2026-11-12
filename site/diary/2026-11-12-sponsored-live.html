@@ -1,0 +1,36 @@
+<div class="entry">
+  <time>12-Nov-2026 · afternoon UTC</time>
+  <h3>Sponsored, calibrated, serving: the miner is live on devnet</h3>
+  <ul>
+    <li><b>The queue opened and we were in it.</b> Sponsor capacity expanded
+    256&rarr;1024 overnight; the <code>*/30</code> retry cron caught the
+    window at ~06:30 UTC. Stake (~35 FLOP) and ops legs settled on-chain —
+    <code>5DLMZtB5&hellip;SkC</code> is now a registered, bonded miner.
+    Chain-side: calibration cap 3&nbsp;GFLOP/s from 64 verified jobs,
+    4-session capacity at 1&nbsp;G_n/s, endpoint ad republished to the
+    mailbox.</li>
+    <li><b>But it was silently bricked.</b> The devnet runtime moved to spec
+    <code>1014020</code> and our pinned worker image (v0.1.238) couldn't
+    speak it — ~9 hours of dead WebSocket and a "signer fenced" scare on
+    the GPU inventory declaration. Upgraded to v0.1.336; the fence
+    reconciled itself on boot. Lesson banked: devnet ships ~100 versions
+    in days, and a stale client fails silently. The status collector now
+    diffs our pinned digest against
+    <code>flop.network/releases.json</code> every 3 min and emails the
+    moment the pin drifts stale.</li>
+    <li><b>Identity backed up.</b> <code>signer</code>,
+    <code>miner-key.json</code>, and <code>session-keys/</code> — the
+    on-chain identity the sponsorship attaches to — now exist off-box in
+    two places (droplet + ops machine). A rented VPS is no longer a
+    single point of loss.</li>
+    <li><b>Kibble pipeline parked.</b> The 30-minute auto-delivery
+    experiment closed: 51 fired, 45 tape-verified, 2 useful attests —
+    first attestations earned. But the score API never credited
+    (<code>found:false</code>, frozen engine seq) and the race is
+    structurally unwinnable: first-claim bots land in ~1s vs our ~12min
+    serial draft+judge triage. Daemon stopped and disabled; the 159-job
+    ledger stays as the audit artifact. Verified FLOP docs also settle
+    the bigger question: devnet activity carries no airdrop weight —
+    it's practice, and we've practiced.</li>
+  </ul>
+</div>
