@@ -66,7 +66,7 @@ main { width: min(860px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
   border-radius: 12px; padding: 14px 16px;
 }
 .card .lbl { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
-.card .big { font-size: 20px; font-weight: 700; margin: 6px 0 2px; }
+.card .big { font-size: 20px; font-weight: 700; margin: 6px 0 2px; overflow-wrap: anywhere; }
 .card .sub { color: var(--text-secondary); font-size: 12px; margin-top: 4px; line-height: 1.5; }
 .card .sub code { color: var(--text-muted); font-size: 11px; }
 .ok { color: var(--accent-secondary); }
@@ -169,7 +169,7 @@ td.ours { color: var(--accent-secondary); font-weight: 700; }
     var cards = '';
 
     var pstate = d.provider_state || (d.ssh_ok ? 'unknown' : 'ssh unreachable');
-    cards += card('Provider state', esc(pstate), stateClass(pstate),
+    cards += card('Provider state', esc(pstate.replace(/_/g, ' ')), stateClass(pstate),
       esc(d.next_action || ''));
 
     var rt = d.runtime || {};
