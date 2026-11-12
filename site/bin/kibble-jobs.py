@@ -291,7 +291,10 @@ def main():
     for jid, body, sender in new_jobs:
         if jid in pending:
             continue
-        if len(pending) >= MAX_PENDING or triaged >= 5:
+        live = sum(1 for p in pending.values() if not p.get("sent"))
+        if live >= MAX_PENDING or triaged >= 5:
+            log("triage paused: live_pending=%d (cap %d) or run cap hit"
+                % (live, MAX_PENDING))
             break
         if OUR_DID_TAIL in sender:
             continue  # never claim our own postings (three-party rule)
