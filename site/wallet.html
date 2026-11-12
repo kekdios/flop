@@ -110,9 +110,14 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
   <p class="note">
     Devnet tokens have no monetary value and cannot be sold — they exist
     for testing only. The <b>bridge</b> address is custodial (spendable
-    on gateway chat only); <b>wallet</b> is self-custodied in Talisman;
-    <b>miner</b> is the on-chain miner identity; <b>stale</b> is the
-    previously assigned bridge address.
+    on gateway chat only) and <b>rotates every day or so</b> — the
+    collector resolves the current assignment; balances left behind on
+    rotated addresses are stranded. <b>wallet</b> is self-custodied in
+    Talisman; <b>multichain</b> is the FLOP address derived from our
+    mainnet NEAR account <code>agentchainlab.near</code> via chain
+    signatures (the NEAR key controls it); <b>miner</b> is the on-chain
+    miner identity; <b>stale</b> entries are abandoned bridge
+    assignments.
     Live data via <code>wss://rpc.devnet.flop.network</code>; when the
     node is unreachable this page falls back to the last droplet snapshot.
     Daily 25 FLOP claims: <code>/var/log/flop-faucet.log</code> on the droplet.
@@ -130,15 +135,21 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
     { label: 'wallet', role: 'Talisman — self-custodied',
       address: '5H1E2XQ3VhTt9WdwxFQcipBGgD67FqjXfHSnvMnWQKgPsUNS',
       key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da9273bbc15d1b173316d77bf9c793d7d9bda85bf279364657328d7594cd4f004b5f444aec824cff0f6f531331cf34d2f69' },
-    { label: 'bridge', role: 'kibble bridge — custodial, inference budget',
-      address: '5GpjXEBuS1L8Svrrh9EMDTruwvhNPAquAjjJ4XLAbbe3fR6w',
-      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da992190efa49d1cf443947447c97bcc17ed28555fc48db75995455e182f82e9081d3239d5ad4c17e46a131296c249d5572' },
+    { label: 'bridge', role: 'kibble bridge — custodial, rotates',
+      address: '5EkGcLZfE3RfcZhfYKYx9DoUecJnTSjtc7Lpy4puJ93joBa3',
+      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da901bc77ab3623b68f072f6331d0151dac76a54b38a56189175440ea1df663506b0d6528691d65a10579bff6a61d86670a' },
     { label: 'miner', role: 'miner identity — key on GPU host',
       address: '5DLMZtB5it7s6DZRmd98ABzfY8zPx9JBAAcvCtgXTL4ttSkC',
       key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da91f95bb195b7b85ac07004c4c70fe4a91382bdc149738d2ec15755be862988531ec624cf6c76ff0a4a8fe20441c17d30f' },
-    { label: 'stale', role: 'previous bridge assignment — stranded balance',
+    { label: 'multichain', role: 'agentchainlab.near — chain-signatures derived',
+      address: '5EZK4Z6jrNBw41X52P1X11aYzLjEmAfE3bAcjBheJ18KMiRw',
+      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da981b0801feac459a2dab25326777f89476e49d93b474d935df96e946997e8162565322e1c20ff8c4f7f94df95331c6061' },
+    { label: 'stale', role: 'rotated-out bridge — stranded balance',
       address: '5DUAJj3YrFmYj5bbzzJULgrfKeLrVHpuWE1UAEsHPwSYivu9',
-      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da957aba76f3ad473e7d497c1ac42cd387a3e1fe9f4d8819b99d1ebed71dd178cf31b3ebd2b2d309db8993d5806e8d6e054' }
+      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da957aba76f3ad473e7d497c1ac42cd387a3e1fe9f4d8819b99d1ebed71dd178cf31b3ebd2b2d309db8993d5806e8d6e054' },
+    { label: 'stale-2', role: 'rotated-out bridge — stranded balance',
+      address: '5GpjXEBuS1L8Svrrh9EMDTruwvhNPAquAjjJ4XLAbbe3fR6w',
+      key: '0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da992190efa49d1cf443947447c97bcc17ed28555fc48db75995455e182f82e9081d3239d5ad4c17e46a131296c249d5572' }
   ];
 
   var statusEl = document.getElementById('status');
@@ -148,6 +159,7 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
   var totalBal = document.getElementById('total-bal');
   var balances = {};   // label -> FLOP number or null
   var stakes = {};     // label -> sponsored-stake FLOP (from flop.json)
+  var addrs = {};      // label -> resolved address (from flop.json)
 
   function setStatus(s, cls) {
     statusEl.textContent = s;
@@ -182,7 +194,8 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
       v.textContent = typeof bal === 'number' ? bal.toLocaleString(undefined, {maximumFractionDigits: 4}) : '—';
       var u = document.createElement('span'); u.className = 'unit'; u.textContent = ' FLOP';
       v.appendChild(u);
-      var ad = document.createElement('div'); ad.className = 'addr'; ad.textContent = a.address;
+      var ad = document.createElement('div'); ad.className = 'addr';
+      ad.textContent = addrs[a.label] || a.address;
       var r = document.createElement('div'); r.className = 'role'; r.textContent = a.role;
       c.appendChild(lbl); c.appendChild(v); c.appendChild(ad); c.appendChild(r);
       if (typeof stakes[a.label] === 'number' && stakes[a.label] > 0) {
@@ -204,6 +217,7 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
     }).then(function (d) {
       (d.accounts || []).forEach(function (a) {
         if (typeof a.free === 'number') balances[a.label] = a.free;
+        if (a.address) addrs[a.label] = a.address;
       });
       render();
       setStatus('devnet RPC unreachable — showing droplet snapshot from ' +

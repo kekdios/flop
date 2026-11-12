@@ -262,6 +262,15 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   `/opt/flop-miner/signer` + `miner-key.json` (miner address
   `5DLMZtB5…SkC`). That signer is the on-chain miner identity; whoever
   holds it IS the miner. Back it up before any hot-swap.
+- **NEAR multichain account (2026-11-12)**: user created mainnet NEAR
+  account `agentchainlab.near`. Via NEAR chain signatures (MPC
+  `v1.signer.derived_public_key`, domain_id 1) it controls a derived
+  FLOP account `5EZK4Z6jrNBw41X52P1X11aYzLjEmAfE3bAcjBheJ18KMiRw`
+  (verified: valid SS58, liveBalance on-chain). **The NEAR recovery
+  phrase is a FLOP key** — custody sits user-side in their NEAR
+  wallet. Faucet cron claims for it nightly (MULTICHAIN_ADDR in
+  flop-ops.env); wallet page tracks it as "multichain". Distinct from
+  the Talisman wallet 5H1E2XQ3 (different key, different account).
 - **Live FLOP (post-devnet)**: same model — control = key possession.
   Miner earnings accrue to the miner address (its key lives on the
   GPU host; keep `signer`+`miner-key.json` safe). A personal wallet =

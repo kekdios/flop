@@ -17,8 +17,9 @@ addr=$(curl -s -m 30 -X POST https://kibble.world/api/flop-devnet \
   -d "{\"action\":\"address\",\"seed_hex\":\"$KIBBLE_SEED\"}" \
   | python3 -c 'import json,sys; print(json.load(sys.stdin).get("address",""))' 2>/dev/null)
 
-# Also claim for the operator's Talisman wallet (self-custodied).
-[ -n "$addr" ] && addr="$addr ${PERSONAL_ADDR:-}"
+# Also claim for the operator's Talisman wallet (self-custodied) and the
+# NEAR-derived multichain address (controlled by agentchainlab.near).
+[ -n "$addr" ] && addr="$addr ${PERSONAL_ADDR:-} ${MULTICHAIN_ADDR:-}"
 
 if [ -z "${addr// /}" ]; then
   echo "$(ts) could not resolve bridge address" >> "$LOG"; exit 1
