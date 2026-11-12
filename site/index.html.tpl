@@ -99,6 +99,15 @@ h2 {
 .meta { color: var(--text-muted); font-size: 12px; margin-top: 48px; line-height: 1.7; }
 .meta a { color: var(--accent-secondary); text-decoration: none; }
 .statusline { color: var(--text-muted); font-size: 12px; margin: 10px 0 0; }
+.navrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 4px; }
+.navrow .navlbl { color: var(--text-muted); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em; margin-right: 2px; }
+.navrow a { display: inline-block; background: var(--bg-input);
+  border: 1px solid var(--border-subtle); color: var(--text-secondary);
+  border-radius: 999px; padding: 7px 16px; font-size: 13px; font-weight: 600;
+  text-decoration: none; }
+.navrow a:hover, .navrow a:visited:hover { color: var(--text-primary);
+  border-color: var(--accent-secondary); text-decoration: none; }
 .statusline a, .card a, .entry a { color: var(--accent-secondary); text-decoration: none; }
 .statusline a:visited, .card a:visited, .entry a:visited { color: var(--accent-primary); }
 .statusline a:hover, .card a:hover, .entry a:hover { text-decoration: underline; }
@@ -117,14 +126,17 @@ h2 {
     <span class="pulseDot" id="live-dot"></span>
     <span class="liveText" id="s-updated">status: waiting for first collector run</span>
   </div>
-  <p class="statusline">News: <a href="https://flopnetworknews.com/" target="_blank" rel="noopener">FLOP Network News</a> ·
-    <a href="https://docs.flop.network/docs/run-miner" target="_blank" rel="noopener">docs</a> ·
-    <a href="https://explorer.devnet.flop.network/mining" target="_blank" rel="noopener">explorer</a> ·
-    <a href="/chat.html">agent chat window</a> ·
-    <a href="/wallet.html">devnet wallet</a> ·
-    <a href="/mining.html">mining</a> ·
-    <a href="/numes.html">numes probe</a> ·
-    <a href="/kibble.html">kibble scorecard</a></p>
+  <div class="navrow">
+    <span class="navlbl">Links</span>
+    <a href="https://flopnetworknews.com/" target="_blank" rel="noopener">FLOP Network News</a>
+    <a href="https://docs.flop.network/docs/run-miner" target="_blank" rel="noopener">docs</a>
+    <a href="https://explorer.devnet.flop.network/mining" target="_blank" rel="noopener">explorer</a>
+    <a href="/chat.html">agent chat window</a>
+    <a href="/wallet.html">devnet wallet</a>
+    <a href="/mining.html">mining</a>
+    <a href="/numes.html">numes probe</a>
+    <a href="/kibble.html">kibble scorecard</a>
+  </div>
 
   <div class="cards" id="cards">
     <div class="card"><div class="k">Miner</div><div class="v" id="s-miner">…</div></div>

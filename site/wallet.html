@@ -147,6 +147,7 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
   var totalEl = document.getElementById('total');
   var totalBal = document.getElementById('total-bal');
   var balances = {};   // label -> FLOP number or null
+  var stakes = {};     // label -> sponsored-stake FLOP (from flop.json)
 
   function setStatus(s, cls) {
     statusEl.textContent = s;
@@ -184,6 +185,12 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
       var ad = document.createElement('div'); ad.className = 'addr'; ad.textContent = a.address;
       var r = document.createElement('div'); r.className = 'role'; r.textContent = a.role;
       c.appendChild(lbl); c.appendChild(v); c.appendChild(ad); c.appendChild(r);
+      if (typeof stakes[a.label] === 'number' && stakes[a.label] > 0) {
+        var st = document.createElement('div'); st.className = 'role';
+        st.textContent = 'staked ' + stakes[a.label].toLocaleString(undefined,
+          {maximumFractionDigits: 2}) + ' FLOP (sponsored)';
+        c.appendChild(st);
+      }
       cardsEl.appendChild(c);
     });
     totalEl.style.display = any ? 'flex' : 'none';
@@ -244,6 +251,17 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
       try { ws.close(); } catch (e) {}
     };
   }
+
+  // Stake annotation comes from the droplet snapshot (same-origin), which
+  // flop-balance.py enriches with the explorer's sponsoredStake figure.
+  fetch('/flop.json?_=' + Date.now()).then(function (r) { return r.json(); })
+    .then(function (d) {
+      (d.accounts || []).forEach(function (a) {
+        if (typeof a.staked_sponsored === 'number')
+          stakes[a.label] = a.staked_sponsored;
+      });
+      render();
+    }).catch(function () {});
 
   render();
   live();

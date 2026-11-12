@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 ENV_FILE = "/etc/flop-ops.env"
@@ -168,6 +169,16 @@ def main():
             k, v = line.split("=", 1)
             env_kv[k.strip()] = v.strip()
 
+    chain = {}
+    if info.get("minerAddress"):
+        try:
+            chain = json.loads(urllib.request.urlopen(urllib.request.Request(
+                "https://explorer.devnet.flop.network/api/miners/"
+                + info["minerAddress"],
+                headers={"User-Agent": "flop-ops/1.0"}), timeout=10).read())
+        except Exception:
+            pass
+
     log = s.get("LOG", "")
     cal_log = re.search(
         r"\[calibration\] initial cap accepted: ([\d.]+) GFLOP/s from "
@@ -216,6 +227,24 @@ def main():
             "capacity_sessions": int(cap_log.group(2)) if cap_log else None,
             "max_unacked_gn": info.get("maxUnackedGn"),
             "audit_handoff": info.get("audit_handoff_enabled"),
+        },
+        "chain": {
+            "self_stake": int(chain.get("selfStake", "0") or 0) / 1e18,
+            "sponsored_stake": int(chain.get("sponsoredStake", "0") or 0)
+                / 1e18,
+            "delegated_stake": int(chain.get("delegatedStake", "0") or 0)
+                / 1e18,
+            "is_active": chain.get("isActive"),
+            "blacklisted": chain.get("blacklisted"),
+            "strikes": chain.get("strikes"),
+            "registered_block": chain.get("registeredBlock"),
+            "commission": chain.get("commission"),
+            "total_rewards": int(chain.get("totalRewards", "0") or 0) / 1e18,
+            "total_slashed": int(chain.get("totalSlashed", "0") or 0) / 1e18,
+            "gpu_inventory_declared":
+                chain.get("declaredGpuInventory") is not None,
+            "poui_rank": chain.get("pouiRank"),
+            "work": chain.get("work") or {},
         },
         "sponsorship": sponsor,
         "hardware": {"gpu": s.get("GPU", "")},

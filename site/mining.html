@@ -129,9 +129,23 @@ td.k { color: var(--text-muted); white-space: nowrap; width: 180px; }
       dotEl.className = d.info_stale ? 'pulseDot warn' : 'pulseDot'; }
 
     var cal = d.calibration || {}, sv = d.serving || {},
-        idn = d.identity || {}, sp = d.sponsorship || {};
+        idn = d.identity || {}, sp = d.sponsorship || {},
+        ch = d.chain || {}, wk0 = ch.work || {};
+    function fmt(n, dp) { return n == null ? '—' :
+      Number(n).toLocaleString(undefined, {maximumFractionDigits: dp == null ? 2 : dp}); }
     var calCls = cal.ready ? 'ok' : (cal.state ? 'warn' : 'bad');
-    var cards = card('Calibration',
+    var cards = card('Staked',
+      ch.sponsored_stake != null ? fmt(ch.sponsored_stake, 0) : '—',
+      ch.is_active ? 'ok' : 'warn',
+      'sponsored' + (ch.self_stake ? ' · self ' + fmt(ch.self_stake, 0) : '') +
+      (ch.delegated_stake ? ' · del ' + fmt(ch.delegated_stake, 0) : '') +
+      (ch.is_active ? ' · active' : ' · not active'));
+    cards += card('Work settled',
+      wk0.settled != null ? String(wk0.settled) : '0',
+      (wk0.settled || 0) > 0 ? 'ok' : 'warn',
+      'committed ' + (wk0.committed || 0) + ' · in-flight ' + (wk0.inFlight || 0) +
+      (ch.poui_rank != null ? ' · rank ' + ch.poui_rank : ''));
+    cards += card('Calibration',
       cal.state ? esc(cal.state) : '—', calCls,
       (cal.cap_gflops != null ? 'cap ' + cal.cap_gflops + ' GFLOP/s' : '') +
       (cal.verified_jobs != null ? ' · ' + cal.verified_jobs + ' verified jobs' : ''));
@@ -167,6 +181,14 @@ td.k { color: var(--text-muted); white-space: nowrap; width: 180px; }
     if (cal.accepted_at) row('Calibration window',
       'accepted block ' + esc(cal.accepted_at) + ' · expires ' +
       esc(cal.expires_at) + ' · current ' + esc(cal.current_block));
+    if (ch.registered_block) row('On-chain record',
+      'registered #' + esc(ch.registered_block) + ' · strikes ' +
+      esc(ch.strikes != null ? ch.strikes : '?') + ' · commission ' +
+      esc(ch.commission != null ? ch.commission + '%' : '?') +
+      (ch.blacklisted ? ' · BLACKLISTED' : '') +
+      ' · GPU inventory ' + (ch.gpu_inventory_declared ? 'declared' : 'not declared'));
+    if (ch.total_rewards || ch.total_slashed) row('Rewards / slashed',
+      esc(fmt(ch.total_rewards) + ' FLOP / ' + fmt(ch.total_slashed) + ' FLOP'));
     (sp.legs || []).forEach(function (l) {
       row('Sponsor ' + l.kind, esc(l.flop + ' FLOP · ' + l.state + ' · ' +
         short(l.tx, 22))); });

@@ -134,6 +134,19 @@ def main():
                 rec["free"] = free / 1e18
             else:
                 rec["free"] = 0
+            if label == "miner":
+                try:
+                    m = json.loads(urllib.request.urlopen(urllib.request.Request(
+                        "https://explorer.devnet.flop.network/api/miners/"
+                        + addr, headers={"User-Agent": "flop-ops/1.0"}),
+                        timeout=10).read())
+                    rec["staked_sponsored"] = int(
+                        m.get("sponsoredStake", "0")) / 1e18
+                    rec["staked_self"] = int(m.get("selfStake", "0")) / 1e18
+                    rec["is_active"] = m.get("isActive")
+                    rec["strikes"] = m.get("strikes")
+                except Exception:
+                    pass
             out["accounts"].append(rec)
         sock.close()
     except Exception as e:
