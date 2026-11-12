@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgentChainLab — FLOP Devnet Ops</title>
+<meta name="description" content="Live ops diary and status for the AgentChainLab FLOP devnet miner." />
+<link rel="icon" type="image/png" href="/assets/icon_flask.png" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg-main: #0a1a29;
+  --bg-card: #0f2840;
+  --bg-card-elevated: #10263d;
+  --bg-input: #071521;
+  --accent-primary: #228B22;
+  --accent-secondary: #2e9d2e;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B0B3B8;
+  --text-muted: #6B6F76;
+  --border-subtle: rgba(31, 74, 85, 0.6);
+  --border-strong: #1f4a55;
+  --warn: #e8a33d;
+  --bad: #e05563;
+  --font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --card-radius: 16px;
+  --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh;
+  font-family: var(--font-family);
+  font-size: 14px;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+.topHeader {
+  display: flex; align-items: center;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+.brandLink { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brandLogo { height: 34px; width: auto; display: block; }
+.brandName { color: var(--text-primary); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+.brandSub { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+
+main { width: min(860px, 100%); margin: 0 auto; padding: 26px 20px 64px; }
+
+.liveRow { display: flex; align-items: center; gap: 8px; margin: 18px 0 4px; }
+.pulseDot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-secondary);
+  box-shadow: 0 0 0 0 rgba(46,157,46,.6);
+  animation: pulse 2s infinite;
+}
+.pulseDot.down { background: var(--bad); box-shadow: none; animation: none; }
+@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(46,157,46,.5)} 70%{box-shadow:0 0 0 9px rgba(46,157,46,0)} 100%{box-shadow:0 0 0 0 rgba(46,157,46,0)} }
+.liveText { color: var(--text-secondary); font-size: 13px; }
+
+.cards {
+  display: grid; gap: 12px; margin: 16px 0 8px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--card-radius); padding: 14px 16px;
+  box-shadow: var(--card-shadow);
+}
+.card .k { color: var(--text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; }
+.card .v { font-size: 17px; font-weight: 600; margin-top: 7px; word-break: break-word; }
+.ok   { color: var(--accent-secondary); }
+.warn { color: var(--warn); }
+.bad  { color: var(--bad); }
+
+h2 {
+  font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-muted); margin: 42px 0 16px;
+}
+
+.entry {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--card-radius); padding: 18px 20px; margin: 0 0 18px;
+}
+.entry time { color: var(--accent-secondary); font-size: 12px; font-weight: 600; letter-spacing: .04em; }
+.entry h3 { margin: 6px 0 10px; font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.entry p, .entry li { font-size: 13.5px; line-height: 1.65; color: var(--text-secondary); }
+.entry p strong, .entry li strong, .entry li b { color: var(--text-primary); }
+.entry code {
+  background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 5px;
+  padding: 1px 6px; font-size: 12px; color: var(--text-primary);
+}
+.entry pre {
+  background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 10px;
+  padding: 12px 14px; overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+}
+.meta { color: var(--text-muted); font-size: 12px; margin-top: 48px; line-height: 1.7; }
+.meta a { color: var(--accent-secondary); text-decoration: none; }
+.statusline { color: var(--text-muted); font-size: 12px; margin: 10px 0 0; }
+.statusline a, .card a, .entry a { color: var(--accent-secondary); text-decoration: none; }
+.statusline a:visited, .card a:visited, .entry a:visited { color: var(--accent-primary); }
+.statusline a:hover, .card a:hover, .entry a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header class="topHeader">
+  <a href="/" class="brandLink">
+    <img src="/assets/agentchainlab_nb.png" alt="AgentChainLab" class="brandLogo" />
+    <span class="brandName">AgentChainLab</span>
+    <span class="brandSub">/ FLOP Devnet Ops</span>
+  </a>
+</header>
+<main>
+  <div class="liveRow">
+    <span class="pulseDot" id="live-dot"></span>
+    <span class="liveText" id="s-updated">status: waiting for first collector run</span>
+  </div>
+  <p class="statusline">News: <a href="https://flopnetworknews.com/" target="_blank" rel="noopener">FLOP Network News</a> ·
+    <a href="https://docs.flop.network/docs/run-miner" target="_blank" rel="noopener">docs</a> ·
+    <a href="https://explorer.devnet.flop.network/mining" target="_blank" rel="noopener">explorer</a> ·
+    <a href="/chat.html">agent chat window</a> ·
+    <a href="/wallet.html">devnet wallet</a> ·
+    <a href="/numes.html">numes probe</a></p>
+
+  <div class="cards" id="cards">
+    <div class="card"><div class="k">Miner</div><div class="v" id="s-miner">…</div></div>
+    <div class="card"><div class="k">GPU</div><div class="v" id="s-gpu">…</div></div>
+    <div class="card"><div class="k">Model</div><div class="v" id="s-model">…</div></div>
+    <div class="card"><div class="k">Calibration</div><div class="v" id="s-cal">…</div></div>
+    <div class="card"><div class="k">Sessions</div><div class="v" id="s-sess">…</div></div>
+    <div class="card"><div class="k">Spend so far</div><div class="v" id="s-spend">…</div></div>
+    <div class="card"><div class="k">Endpoint</div><div class="v" id="s-ep">…</div></div>
+    <div class="card"><div class="k">Kibble</div><div class="v" id="s-kib">…</div></div>
+  </div>
+
+  <h2>The short version</h2>
+  <!--SUMMARY-->
+
+  <h2>Operator diary</h2>
+  <div id="diary"><!--DIARY--></div>
+
+  <p class="meta">
+    Host: DigitalOcean droplet · Miner: Vast.ai KVM instance · Network: FLOP devnet (test FLOP, no value)<br/>
+    Docs: <a href="https://docs.flop.network/docs/run-miner" target="_blank" rel="noopener">run-miner</a> ·
+    <a href="https://explorer.devnet.flop.network/mining" target="_blank" rel="noopener">devnet explorer</a> ·
+    <a href="https://x.com/AgentChainLab" target="_blank" rel="noopener">@AgentChainLab</a> ·
+    <a href="https://github.com/kekdios/flop" target="_blank" rel="noopener">repo</a><br/>
+    <span id="ver">10-Nov-2026</span>
+  </p>
+</main>
+<script>
+function cls(el, s) {
+  el.className = 'v ' + (s === 'ok' ? 'ok' : s === 'warn' ? 'warn' : s === 'bad' ? 'bad' : '');
+}
+async function tick() {
+  try {
+    const r = await fetch('/status.json?_=' + Date.now());
+    const s = await r.json();
+    const set = (id, txt, st) => { const e = document.getElementById(id); e.textContent = txt; cls(e, st); };
+    set('s-miner', s.miner || '—', s.miner_state);
+    set('s-gpu', s.gpu || '—', s.gpu_state);
+    set('s-model', s.model || '—', s.model_state);
+    set('s-cal', s.calibration || '—', s.calibration_state);
+    set('s-sess', s.sessions || '—', s.sessions_state);
+    set('s-spend', s.spend || '—', s.spend_state);
+    set('s-ep', s.endpoint || '—', s.endpoint_state);
+    set('s-kib', s.kibble ? 'score ' + s.kibble : '—', s.kibble_state);
+    document.getElementById('s-updated').textContent =
+      'status updated ' + (s.updated || 'never') + ' · ' + (s.note || '');
+    document.getElementById('live-dot').className =
+      'pulseDot' + (s.miner_state === 'bad' ? ' down' : '');
+  } catch (e) {
+    document.getElementById('s-updated').textContent = 'status unavailable';
+    document.getElementById('live-dot').className = 'pulseDot down';
+  }
+}
+tick(); setInterval(tick, 60000);
+</script>
+</body>
+</html>

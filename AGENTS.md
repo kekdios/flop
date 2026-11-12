@@ -67,7 +67,15 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   --profile gpt-oss-a4000` on the box.
 - Numery keys in `~/.flop/numes.env`: NUMES_API_KEY (USD inference,
   catalogue reads), NUMES_MGMT_KEY (management), NUMES_BTC_KEY (BTC
-  inference, customer-side loop testing later).
+  inference, customer-side loop testing later; ALSO on droplet in
+  /etc/flop-ops.env for the collector).
+- **Status page**: `/numes.html` — collector `site/bin/numes-status.py` →
+  `/usr/local/lib/flop-ops/numes-status.py`, cron `*/10`, writes
+  `/var/www/agentchainlab/numes.json`. SSH key for the probe box:
+  `/root/.flop/vast_ed25519` on the droplet; NUMES_SSH_* in flop-ops.env.
+  Catalogue data is BTC-key-scoped — BTC keys see ONLY BTC-priced models
+  (14 frontier-scale models at probe start; our gpt-oss-20b would be the
+  only sub-frontier BTC offer once approved).
 - Caveats: only BTC-key customers can buy (small pool — we were the only
   BTC offer at scan time); tool capability needs vLLM's tool-call parser
   (without it validation fails `invalid_tool_call`); numes admin review

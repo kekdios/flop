@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgentChainLab — Numes provider probe</title>
+<meta name="description" content="Live status of the AgentChainLab Numes provider probe: offer state, endpoint health, GPU, and the BTC-scoped market." />
+<link rel="icon" type="image/png" href="/assets/icon_flask.png" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg-main: #0a1a29;
+  --bg-card: #0f2840;
+  --bg-input: #071521;
+  --accent-primary: #228B22;
+  --accent-secondary: #2e9d2e;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B0B3B8;
+  --text-muted: #6B6F76;
+  --border-subtle: rgba(31, 74, 85, 0.6);
+  --warn: #e8a33d;
+  --bad: #e05563;
+  --btc: #f7931a;
+  --font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh; font-family: var(--font-family); font-size: 14px;
+  background: var(--bg-main); color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+.topHeader {
+  display: flex; align-items: center;
+  padding: 14px 22px; border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+.brandLink { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brandLogo { height: 34px; width: auto; display: block; }
+.brandName { color: var(--text-primary); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+.brandSub { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+.backBtn {
+  margin-left: auto; display: inline-block;
+  background: var(--bg-input); border: 1px solid var(--border-subtle);
+  color: var(--text-secondary); border-radius: 999px;
+  padding: 7px 16px; font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.backBtn:hover { color: var(--text-primary); border-color: var(--accent-secondary); }
+
+main { width: min(860px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
+
+.liveRow { display: flex; align-items: center; gap: 8px; margin: 14px 0 16px; }
+.pulseDot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-secondary);
+  box-shadow: 0 0 0 0 rgba(46,157,46,.6); animation: pulse 2s infinite;
+}
+.pulseDot.warn { background: var(--warn); box-shadow: none; animation: none; }
+.pulseDot.down { background: var(--bad); box-shadow: none; animation: none; }
+@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(46,157,46,.5)} 70%{box-shadow:0 0 0 9px rgba(46,157,46,0)} 100%{box-shadow:0 0 0 0 rgba(46,157,46,0)} }
+.liveText { color: var(--text-secondary); font-size: 13px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 12px; padding: 14px 16px;
+}
+.card .lbl { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.card .big { font-size: 20px; font-weight: 700; margin: 6px 0 2px; }
+.card .sub { color: var(--text-secondary); font-size: 12px; margin-top: 4px; line-height: 1.5; }
+.card .sub code { color: var(--text-muted); font-size: 11px; }
+.ok { color: var(--accent-secondary); }
+.warn { color: var(--warn); }
+.bad { color: var(--bad); }
+.btc { color: var(--btc); }
+
+.section { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin: 22px 0 10px; }
+
+table { width: 100%; border-collapse: collapse; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden; }
+th, td { text-align: left; padding: 8px 12px; font-size: 12.5px; border-bottom: 1px solid var(--border-subtle); }
+th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+td { color: var(--text-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+td.ours { color: var(--accent-secondary); font-weight: 700; }
+
+.note { color: var(--text-muted); font-size: 12px; margin: 16px 0 0; line-height: 1.6; }
+.note a { color: var(--accent-secondary); text-decoration: none; }
+.note code { background: var(--bg-input); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+.statusline { color: var(--text-muted); font-size: 12px; margin: 10px 0 0; }
+.statusline a { color: var(--accent-secondary); text-decoration: none; }
+</style>
+</head>
+<body>
+<header class="topHeader">
+  <a href="/" class="brandLink">
+    <img src="/assets/agentchainlab_nb.png" alt="AgentChainLab" class="brandLogo" />
+    <span class="brandName">AgentChainLab</span>
+    <span class="brandSub">/ Numes provider probe</span>
+  </a>
+  <a href="/" class="backBtn">← Back</a>
+</header>
+<main>
+  <div class="liveRow">
+    <span class="pulseDot" id="live-dot"></span>
+    <span class="liveText" id="status">loading…</span>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="section">BTC-scoped catalogue (what BTC-key customers can buy)</div>
+  <table>
+    <thead><tr><th>Model</th><th>Context</th><th>$/1M in</th><th>$/1M out</th></tr></thead>
+    <tbody id="cat-body"><tr><td colspan="4">loading…</td></tr></tbody>
+  </table>
+
+  <p class="note">
+    The Numes catalogue is <b>currency-scoped</b>: customers only see models
+    priced in their key's currency. BTC keys currently see only the models
+    above — all frontier-scale. Our <code>openai/gpt-oss-20b</code> offer,
+    once approved, will be the only sub-frontier model purchasable in BTC.
+    Pricing is USD-indexed BTC (we enter dollar prices, earnings settle in
+    sats) at parity with Numes' hosted USD offer: $0.03/1M prompt,
+    $0.14/1M completion. Probe box: vast.ai RTX A4000, ~$2/day of
+    pre-paid credit. Data refreshed every 10 min by the droplet collector;
+    this page polls <code>/numes.json</code> each minute.
+  </p>
+  <p class="statusline">
+    Back to the <a href="/">ops board</a>.
+  </p>
+</main>
+<script>
+(function () {
+  var statusEl = document.getElementById('status');
+  var dotEl = document.getElementById('live-dot');
+  var cardsEl = document.getElementById('cards');
+  var catBody = document.getElementById('cat-body');
+
+  function setStatus(s, cls) {
+    statusEl.textContent = s;
+    dotEl.className = 'pulseDot' + (cls ? ' ' + cls : '');
+  }
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function stateClass(s) {
+    if (!s) return 'warn';
+    if (/live|running|healthy|connected|approved/i.test(s)) return 'ok';
+    if (/fail|error|reject|suspend|down|disconnect/i.test(s)) return 'bad';
+    return 'warn';
+  }
+
+  function card(lbl, big, cls, sub) {
+    return '<div class="card"><div class="lbl">' + esc(lbl) + '</div>' +
+      '<div class="big ' + cls + '">' + big + '</div>' +
+      (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>';
+  }
+
+  function fmtUsd(v) {
+    var n = parseFloat(v);
+    if (isNaN(n)) return '—';
+    return '$' + (n * 1e6).toFixed(2);
+  }
+
+  function render(d) {
+    var cards = '';
+
+    var pstate = d.provider_state || (d.ssh_ok ? 'unknown' : 'ssh unreachable');
+    cards += card('Provider state', esc(pstate), stateClass(pstate),
+      esc(d.next_action || ''));
+
+    var rt = d.runtime || {};
+    var health = [];
+    health.push('vLLM: ' + (d.vllm_models === '1' ? 'serving ' + esc(d.model)
+                             : (d.vllm_models ? esc(d.vllm_models) + ' models' : 'down')));
+    health.push('source: ' + esc(rt.source_health || '—'));
+    health.push('session: ' + esc(rt.session || '—') +
+                (rt.reconnects != null ? ' (' + rt.reconnects + ' reconnects)' : ''));
+    health.push('daemon: ' + (d.daemon_running ? 'running' : 'not running'));
+    var lf = rt.last_failure;
+    if (lf && lf.code) health.push('last failure: ' + esc(lf.code));
+    var sessCls = rt.session === 'connected' ? 'ok'
+                : (d.daemon_running ? 'warn' : 'bad');
+    cards += card('Endpoint', d.daemon_running ? 'daemon up' : 'down',
+                  sessCls, health.join('<br/>'));
+
+    var plat = d.platform || {};
+    var lsts = (plat.listings || []).map(function (l) {
+      return esc(l.model) + ': <b>' + esc(l.status) + '</b>';
+    });
+    var off = plat.offers || {};
+    lsts.push('endpoint: <b>' + esc(plat.endpoint || '—') + '</b>');
+    lsts.push('offers: ' + (off.active || 0) + ' active / ' +
+              (off.pending || 0) + ' pending');
+    cards += card('Offer', (off.active || 0) > 0 ? 'live' : 'pending',
+                  (off.active || 0) > 0 ? 'ok' : 'warn', lsts.join('<br/>'));
+
+    if (d.gpu) {
+      var memPct = Math.round(100 * parseFloat(d.gpu.mem_used) /
+                              parseFloat(d.gpu.mem_total));
+      cards += card('GPU', esc(d.gpu.name), 'ok',
+        esc(d.gpu.mem_used) + ' / ' + esc(d.gpu.mem_total) +
+        ' (' + memPct + '%)<br/>util ' + esc(d.gpu.util) +
+        ' · ' + esc(d.gpu.temp));
+    }
+
+    var cat = d.catalogue_btc;
+    if (cat) {
+      cards += card('BTC catalogue', cat.count + ' models', 'btc',
+        cat.our_model_listed
+          ? 'our model is <b class="ok">listed</b> — reachable by BTC keys'
+          : 'our model not yet visible to BTC keys (pending approval)');
+    }
+
+    cardsEl.innerHTML = cards;
+
+    catBody.innerHTML = '';
+    if (cat && cat.models && cat.models.length) {
+      cat.models.forEach(function (m) {
+        var tr = document.createElement('tr');
+        var ours = m.id === d.model;
+        tr.innerHTML = '<td' + (ours ? ' class="ours"' : '') + '>' + esc(m.id) +
+          (ours ? ' ← ours' : '') + '</td><td>' +
+          (m.ctx ? (m.ctx / 1024).toFixed(0) + 'k' : '—') + '</td><td>' +
+          fmtUsd(m.usd_prompt) + '</td><td>' + fmtUsd(m.usd_completion) +
+          '</td>';
+        catBody.appendChild(tr);
+      });
+    } else {
+      catBody.innerHTML = '<tr><td colspan="4">no catalogue data yet</td></tr>';
+    }
+  }
+
+  function poll() {
+    fetch('/numes.json?_=' + Date.now()).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (d) {
+      render(d);
+      var cls = d.ssh_ok ? (d.provider_state &&
+                /live|approved/i.test(d.provider_state) ? '' : 'warn') : 'down';
+      setStatus('snapshot ' + (d.updated || '?') +
+                (d.ssh_ok ? '' : ' · probe box unreachable'), cls);
+    }).catch(function () {
+      setStatus('no snapshot yet — collector has not run', 'down');
+    });
+  }
+
+  poll();
+  setInterval(poll, 60000);
+})();
+</script>
+</body>
+</html>
