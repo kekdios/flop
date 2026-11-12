@@ -329,6 +329,7 @@ def write_stats(ledger, skipped, pending):
         if len(recent) < 20:
             att = e.get("attests") or []
             recent.append({"id": jid, "cat": cat, "judge": e.get("judge"),
+                           "ts": e.get("ts"),
                            "delivered": bool(e.get("delivered")),
                            "attests": att[-3:], "title": e.get("title")})
     out = {"updated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),

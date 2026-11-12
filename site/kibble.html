@@ -88,7 +88,7 @@ td.pass { color: var(--accent-secondary); } td.fail { color: var(--bad); }
 
   <div class="section">Recent jobs</div>
   <table>
-    <thead><tr><th>Job</th><th>Category</th><th>Judge</th><th>Delivered</th><th>Attests</th></tr></thead>
+    <thead><tr><th>Job</th><th>Triaged (UTC)</th><th>Category</th><th>Judge</th><th>Delivered</th><th>Attests</th></tr></thead>
     <tbody id="recent-body"><tr><td colspan="5">loading…</td></tr></tbody>
   </table>
 
@@ -160,12 +160,14 @@ td.pass { color: var(--accent-secondary); } td.fail { color: var(--bad); }
       var tr = document.createElement('tr');
       var atts = (e.attests || []).map(function (a) {
         return a.v === 'pass' ? '✓' : '✗'; }).join(' ');
-      tr.innerHTML = '<td>' + esc(e.id) + '</td><td>' + esc(e.cat) +
-        '</td><td>' + esc(e.judge || '—') + '</td><td>' +
+      var ts = e.ts ? new Date(e.ts * 1000).toISOString().slice(5, 16)
+                      .replace('T', ' ') : '—';
+      tr.innerHTML = '<td>' + esc(e.id) + '</td><td>' + ts + '</td><td>' +
+        esc(e.cat) + '</td><td>' + esc(e.judge || '—') + '</td><td>' +
         (e.delivered ? '✓' : '—') + '</td><td>' + (atts || '—') + '</td>';
       rb.appendChild(tr); });
     if (!(d.recent || []).length)
-      rb.innerHTML = '<tr><td colspan="5">no jobs yet</td></tr>';
+      rb.innerHTML = '<tr><td colspan="6">no jobs yet</td></tr>';
 
     statusEl.textContent = 'snapshot ' + (d.updated || '?');
     dotEl.className = 'pulseDot';
