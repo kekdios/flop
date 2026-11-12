@@ -155,7 +155,16 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
     seeds seq silently (`seeded` flag). Gotchas: MAX_PENDING counts
     UNSENT entries only — counting sent ones caused a silent stall;
     when `NOTIFY_OFF` is set, non-auto jobs are ledger-only (never
-    pended — unreachable links would saturate the cap).
+    pended — unreachable links would saturate the cap); untriaged
+    jobs persist via state["backlog"] so cap-breaks lose nothing.
+  - **Verification layer**: the feed stamps ledger entries when OUR
+    CLAIM/RESULT lines are observed on the tape (tape_claimed /
+    tape_delivered / our_*_ts, plus first_claim/first_deliver for race
+    measurement) — act writes are fire-and-forget, tape is proof.
+    `kibble-score.py` (cron */5) retries the flaky /score endpoint and
+    persists /var/lib/flop-ops/kibble-score.json + a JSONL history;
+    stats merge it into kibble.json for the scorecard (server score,
+    tape-confirmed counts, median claim/deliver/attest latencies).
 - **Public faucet**: `POST https://faucet.flop.network/fund` with
   {"address":"<SS58>"} → 25 FLOP anonymous grant, 24h cooldown
   per address. Verified-human tier (500-2000 FLOP) needs an EVM wallet

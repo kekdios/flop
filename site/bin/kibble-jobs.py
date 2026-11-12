@@ -6,6 +6,7 @@
 #   { "last_seq": N, "pending": {job_id: {ts,cat,title,draft,tok,sent}} }
 # The approval link hits /kibble-approve on the site (kibble-approve.py),
 # which posts CLAIM+RESULT via /act. First run seeds silently.
+import calendar
 import fcntl
 import json
 import os
@@ -26,6 +27,9 @@ STATS_OUT = "/var/www/agentchainlab/kibble.json"
 JOB_RE = re.compile(r"^JOB v1\s*\|\s*(\S+)\s*\|\s*(.*)$")
 ATTEST_RE = re.compile(
     r"^ATTEST v1\s*\|\s*(\S+)\s*\|\s*(useful|not-useful)", re.I)
+CLAIM_RE = re.compile(r"^CLAIM v1\s*\|\s*(\S+)")
+DELIV_RE = re.compile(r"^(?:RESULT|DELIVER) v1\s*\|\s*(\S+)")
+SCORE_SNAP = "/var/lib/flop-ops/kibble-score.json"
 UA = {"User-Agent": "flop-ops/1.0"}
 MAX_PENDING = 12
 JOB_TTL = 4 * 3600
@@ -258,10 +262,30 @@ def feed_msgs(state, ledger):
         if seq > state.get("last_seq", 0):
             state["last_seq"] = seq
         txt = m.get("text", "").strip()
+        sender = m.get("from", "")
+        mts = m.get("ts", "")[:19]
         mt = JOB_RE.match(txt)
         if mt:
-            new_jobs.append((mt.group(1), mt.group(2),
-                             m.get("from", "")))
+            new_jobs.append((mt.group(1), mt.group(2), sender, mts))
+        # Tape-verified claim/deliver tracking: first arrival by anyone
+        # measures the race; our own lines confirm a fire actually landed
+        # (act writes are fire-and-forget — tape is the only proof).
+        tgt = None
+        cm = CLAIM_RE.match(txt)
+        dm = DELIV_RE.match(txt)
+        if cm or dm:
+            tgt = (cm or dm).group(1)
+            e2 = ledger.get(tgt)
+            if e2 is not None:
+                k = "first_claim" if cm else "first_deliver"
+                e2.setdefault(k, {"ts": mts, "by": sender[-14:]})
+                if OUR_DID_TAIL in sender:
+                    if cm:
+                        e2["tape_claimed"] = True
+                        e2.setdefault("our_claim_ts", mts)
+                    else:
+                        e2["tape_delivered"] = True
+                        e2.setdefault("our_deliver_ts", mts)
         at = ATTEST_RE.match(txt)
         if at:
             att_jid, att_v = at.group(1), at.group(2).lower()
@@ -283,7 +307,7 @@ def one_pass(state):
     ledger = state.get("ledger") or {}
     skipped = state.get("skipped") or {}
 
-    new_jobs = feed_msgs(state, ledger)
+    new_jobs = state.pop("backlog", []) + feed_msgs(state, ledger)
     if not state.get("seeded"):
         # First contact: seed seq silently — don't alert on backlog.
         state["seeded"] = True
@@ -312,18 +336,26 @@ def one_pass(state):
     auto_fired = 0
 
     triaged = 0
-    seen = {j for j, _, _ in new_jobs}
+    seen = {j[0] for j in new_jobs}
     last_feed = time.time()
-    for jid, body, sender in new_jobs:
+    idx = 0
+    while idx < len(new_jobs):
+        jid, body, sender, jts = new_jobs[idx]
+        idx += 1
         # Long LLM batches must not let the tape scroll past unseen:
-        # re-poll the feed every ~15s so last_seq keeps advancing.
+        # re-poll the feed every ~15s so last_seq keeps advancing. Jobs
+        # left untriaged at the cap persist via state["backlog"].
         if time.time() - last_feed > 15:
-            for j2, b2, s2 in feed_msgs(state, ledger):
+            for j2, b2, s2, t2 in feed_msgs(state, ledger):
                 if j2 not in seen and j2 not in pending and j2 not in ledger:
-                    new_jobs.append((j2, b2, s2))
+                    new_jobs.append((j2, b2, s2, t2))
                     seen.add(j2)
             last_feed = time.time()
+            state["backlog"] = new_jobs[idx:]
+            state["pending"] = pending
+            state["ledger"] = ledger
             save(state)
+            write_stats(ledger, skipped, pending)
         if jid in pending or jid in ledger:
             continue
         live = sum(1 for p in pending.values() if not p.get("sent"))
@@ -340,8 +372,9 @@ def one_pass(state):
             skipped[cat] = skipped.get(cat, 0) + 1
             continue
         verdict, notes = llm_judge(env, body, draft)
-        ledger[jid] = {"ts": now, "cat": cat, "judge": verdict,
-                       "title": body[:160], "judge_notes": notes,
+        ledger[jid] = {"ts": now, "job_ts": jts, "cat": cat,
+                       "judge": verdict, "title": body[:160],
+                       "judge_notes": notes,
                        "draft": draft[:3000], "draft_model": dmodel}
         if verdict == "FAIL":
             log("job %s draft rejected by judge: %s" % (jid, notes))
@@ -409,6 +442,7 @@ def one_pass(state):
                 if e.get("ts", 0) < now - 7 * 86400]:
         del ledger[jid]
 
+    state["backlog"] = new_jobs[idx:]
     state["pending"] = pending
     state["ledger"] = ledger
     state["skipped"] = skipped
@@ -445,6 +479,14 @@ def main():
         time.sleep(POLL_SEC)
 
 
+def iso_epoch(s):
+    try:
+        return calendar.timegm(
+            time.strptime(str(s)[:19], "%Y-%m-%dT%H:%M:%S"))
+    except (ValueError, TypeError):
+        return None
+
+
 def write_stats(ledger, skipped, pending):
     """Summarise the ledger into kibble.json for /kibble.html.
     Caveat recorded in the data: an ATTEST names a job, not a worker — on
@@ -476,12 +518,52 @@ def write_stats(ledger, skipped, pending):
             recent.append({"id": jid, "cat": cat, "judge": e.get("judge"),
                            "ts": e.get("ts"),
                            "delivered": bool(e.get("delivered")),
+                           "tape_c": bool(e.get("tape_claimed")),
+                           "tape_r": bool(e.get("tape_delivered")),
                            "attests": att[-3:], "title": e.get("title")})
+    # Tape-verified pipeline metrics + race latencies.
+    tape_claimed = tape_delivered = attested_own = 0
+    claim_lat, deliv_lat, att_lat = [], [], []
+    for e in ledger.values():
+        if e.get("tape_claimed"):
+            tape_claimed += 1
+        if e.get("tape_delivered"):
+            tape_delivered += 1
+            if e.get("attests"):
+                attested_own += 1
+        jt = iso_epoch(e.get("job_ts"))
+        ct = iso_epoch(e.get("our_claim_ts"))
+        dt = iso_epoch(e.get("our_deliver_ts"))
+        if jt and ct:
+            claim_lat.append(ct - jt)
+        if ct and dt:
+            deliv_lat.append(dt - ct)
+        for a in e.get("attests") or []:
+            at2 = iso_epoch(a.get("ts"))
+            if dt and at2:
+                att_lat.append(at2 - dt)
+
+    def med(xs):
+        xs = sorted(xs)
+        return xs[len(xs) // 2] if xs else None
+
+    score = None
+    try:
+        score = json.load(open(SCORE_SNAP))
+    except (OSError, ValueError):
+        pass
     out = {"updated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
            "cats": cats, "skipped": skipped,
            "pending_count": sum(1 for p in pending.values()
                                 if not p.get("sent")),
-           "recent": recent}
+           "recent": recent,
+           "score": score,
+           "tape": {"claimed": tape_claimed,
+                    "delivered": tape_delivered,
+                    "attested_deliveries": attested_own,
+                    "med_claim_s": med(claim_lat),
+                    "med_deliver_s": med(deliv_lat),
+                    "med_attest_s": med(att_lat)}}
     try:
         json.dump(out, open(STATS_TMP, "w"))
         os.replace(STATS_TMP, STATS_OUT)

@@ -88,22 +88,25 @@ td.pass { color: var(--accent-secondary); } td.fail { color: var(--bad); }
 
   <div class="section">Recent jobs</div>
   <table>
-    <thead><tr><th>Job</th><th>Triaged (UTC)</th><th>Category</th><th>Judge</th><th>Delivered</th><th>Attests</th></tr></thead>
-    <tbody id="recent-body"><tr><td colspan="5">loading…</td></tr></tbody>
+    <thead><tr><th>Job</th><th>Triaged (UTC)</th><th>Category</th><th>Judge</th><th>On tape</th><th>Attests</th></tr></thead>
+    <tbody id="recent-body"><tr><td colspan="6">loading…</td></tr></tbody>
   </table>
 
   <p class="note">
-    Pipeline: tape scanner (<code>*/2</code>) detects <code>JOB v1</code>
-    lines → gpt-5-mini drafts a RESULT → gpt-5 judges spec compliance →
-    only surviving drafts get emailed with a one-tap approve link that
-    fires CLAIM + RESULT to the board. <b>Judge ✓/✗</b> is the model's
-    own verdict; <b>Attest ✓/✗</b> is a validator's ATTEST on the tape —
-    the metric that actually scores. Skipped jobs (unsuitable/no draft):
-    <span id="skipped">—</span>.<br><br>
+    Pipeline: a ~6s tape poller (systemd daemon, sequence-paged feed)
+    detects <code>JOB v1</code> lines → gpt-5-mini drafts a RESULT →
+    claude-sonnet-4.6 judges spec compliance → surviving drafts fire
+    CLAIM + RESULT to the board. <b>On tape</b> confirms our lines were
+    actually observed on the tape (writes are fire-and-forget — tape is
+    the only proof). <b>Judge ✓/✗</b> is the model's own verdict;
+    <b>Attest ✓/✗</b> is a validator's ATTEST on the tape. Skipped jobs
+    (unsuitable/no draft): <span id="skipped">—</span>.<br><br>
     <b>Caveat:</b> an ATTEST names a job, not a worker — on jobs where
     several workers delivered, a passing attestation may not be for ours.
-    Treat category pass rates as indicative until volume is higher.
-    Data from <code>/kibble.json</code>, refreshed by the scanner each run.
+    The <b>Server score</b> card is the authoritative value when the
+    flaky <code>/score</code> read endpoint responds (persisted snapshot,
+    may be stale). Data from <code>/kibble.json</code>, rewritten each
+    poll cycle.
   </p>
   <p class="statusline">Back to the <a href="/">ops board</a>.</p>
 </main>
@@ -129,8 +132,9 @@ td.pass { color: var(--accent-secondary); } td.fail { color: var(--bad); }
       tot.del += c.delivered; tot.ap += c.att_pass; tot.af += c.att_fail; });
 
     var attTot = tot.ap + tot.af;
+    var tp = d.tape || {};
     var cards = card('Delivered', tot.del, tot.del ? 'ok' : 'warn',
-      tot.t + ' triaged · ' + (d.pending_count || 0) + ' links live');
+      tot.t + ' triaged · ' + (tp.delivered || 0) + ' tape-confirmed');
     cards += card('Judge pass rate',
       (tot.jp + tot.jf) ? Math.round(100 * tot.jp / (tot.jp + tot.jf)) + '%' : '—',
       'ok', tot.jp + ' pass / ' + tot.jf + ' fail');
@@ -138,6 +142,16 @@ td.pass { color: var(--accent-secondary); } td.fail { color: var(--bad); }
       attTot ? Math.round(100 * tot.ap / attTot) + '%' : '—',
       tot.af ? 'warn' : 'ok', tot.ap + ' pass / ' + tot.af + ' fail' +
       (attTot ? '' : ' — awaiting verdicts'));
+    var sc = d.score && d.score.data;
+    var scN = sc && (sc.score != null ? sc.score : sc.total);
+    cards += card('Server score',
+      scN != null ? scN : '—', scN != null ? 'ok' : 'warn',
+      d.score ? 'snapshot ' + (d.score.utc || '?') : 'read API down');
+    cards += card('Race latency',
+      tp.med_claim_s != null ? tp.med_claim_s + 's' : '—',
+      tp.med_claim_s != null && tp.med_claim_s > 10 ? 'warn' : 'ok',
+      'median JOB→our-CLAIM' +
+      (tp.med_attest_s != null ? ' · attest ~' + tp.med_attest_s + 's' : ''));
     document.getElementById('cards').innerHTML = cards;
 
     var sk = d.skipped || {}, sks = Object.keys(sk).map(function (k) {
@@ -162,9 +176,11 @@ td.pass { color: var(--accent-secondary); } td.fail { color: var(--bad); }
         return a.v === 'pass' ? '✓' : '✗'; }).join(' ');
       var ts = e.ts ? new Date(e.ts * 1000).toISOString().slice(5, 16)
                       .replace('T', ' ') : '—';
+      var onTape = (e.tape_c ? 'C✓' : '') + (e.tape_r ? ' R✓' : '');
       tr.innerHTML = '<td>' + esc(e.id) + '</td><td>' + ts + '</td><td>' +
         esc(e.cat) + '</td><td>' + esc(e.judge || '—') + '</td><td>' +
-        (e.delivered ? '✓' : '—') + '</td><td>' + (atts || '—') + '</td>';
+        (onTape || (e.delivered ? 'fired' : '—')) + '</td><td>' +
+        (atts || '—') + '</td>';
       rb.appendChild(tr); });
     if (!(d.recent || []).length)
       rb.innerHTML = '<tr><td colspan="6">no jobs yet</td></tr>';
