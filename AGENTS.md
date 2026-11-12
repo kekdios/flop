@@ -56,11 +56,25 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   API: `/api/ghost-tasks` (no target filter — paginate). This is the
   ONLY work flowing: ~7000 payment sessions exist but only 6 ever
   spent (0.774 FLOP total); proofs24h 0. Ghost tasks ≠ paid work.
+- **Testnet readiness notes (from devnet calibration)**:
+  - The ghost-task burst fires ~5 min after registration and runs
+    ~3.5 min — no warning, one shot. Register ONLY with a fully
+    healthy stack: current worker image (check releases.json FIRST),
+    model loaded, ghost key present, endpoint ad live.
+  - Devnet forgave us (burst ran on the soon-stale v0.1.238) —
+    testnet likely won't. Verify image ≥ releases.json minimum before
+    registering, not after.
+  - Our devnet rate: 72 tasks → 64 verified (~89%) → Soft tier,
+    cap 3. Track verification rate on testnet; it sets tier/cap.
+  - Re-registration (migration/blue-green) probably re-fires the
+    burst — treat a cutover as a calibration event too.
 - **Mining status page**: `/mining.html` ← `flop-mining.py` collector
   (`/usr/local/lib/flop-ops/`, cron `*/5`) → `/var/www/agentchainlab/
   mining.json`. Pulls auth'd `/session/info`, worker log events,
   sponsor legs, containers, GPU. Backup of miner identity (signer,
-  miner-key.json, session-keys): `/var/lib/flop-ops/miner-identity-backup/`
+  miner-key.json, session-keys/enclave.seed, ghost-x25519.json —
+  lives in docker volume `flop-miner-01_worker-data`, decrypts
+  ghost-task verifications): `/var/lib/flop-ops/miner-identity-backup/`
   on the droplet + `~/.flop/miner-backup-5DLM/` locally.
 - User submitted the FLOP miner interest form (operator-grant admission path).
 - **Kibble participation started 2026-11-10**: FLOP Labs' pre-genesis
