@@ -61,10 +61,13 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
     `numes provider daemon --profile gpt-oss-a4000` (detached, PPID 1).
 - **Offer**: provider "AgentChainLab", listing openai/gpt-oss-20b,
   `--currency BTC-indexed` (USD anchors, sats payout), $0.03/1M prompt,
-  $0.14/1M completion = parity with Numes-hosted USD offer. Status:
-  submitted 2026-11-11, `awaiting_provider_approval` (admin review) →
-  then auto capability checks → Live. Check: `numes provider status
-  --profile gpt-oss-a4000` on the box.
+  $0.14/1M completion = parity with Numes-hosted USD offer. **LIVE as of
+  2026-11-12** — approved, verified, routable. Marketplace stats: 100%
+  availability (sparse samples), 329ms TTFT — 2nd fastest of 4
+  providers (AnonInference 261ms BTC-only, Numes 1.6s, amazee 4.2s).
+  Agent note: ~1 reconnect/min on the outbound session — watch it,
+  routing rank is measured health/latency. Check: `numes provider
+  status --profile gpt-oss-a4000` on the box.
 - Numery keys in `~/.flop/numes.env`: NUMES_API_KEY (USD inference,
   catalogue reads), NUMES_MGMT_KEY (management), NUMES_BTC_KEY (BTC
   inference, customer-side loop testing later; ALSO on droplet in
