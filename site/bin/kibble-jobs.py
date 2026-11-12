@@ -30,8 +30,8 @@ UA = {"User-Agent": "flop-ops/1.0"}
 MAX_PENDING = 12
 JOB_TTL = 4 * 3600
 OUR_DID_TAIL = "NQNNMt"
-AUTO_PER_RUN = 3  # max auto-fires per scanner run
-AUTO_PER_HOUR = 10
+AUTO_PER_RUN = 3  # max auto-fires per scanner run (env AUTO_PER_RUN)
+AUTO_PER_HOUR = 10  # per rolling hour (env AUTO_PER_HOUR)
 
 POSTER = r'''
 import json, sys, time, urllib.request
@@ -349,8 +349,8 @@ def main():
             log("job %s draft rejected by judge: %s" % (jid, notes))
             continue
         auto = (auto_active and verdict == "PASS"
-                and auto_fired < AUTO_PER_RUN
-                and auto_hour < AUTO_PER_HOUR)
+                and auto_fired < int(env.get("AUTO_PER_RUN", AUTO_PER_RUN))
+                and auto_hour < int(env.get("AUTO_PER_HOUR", AUTO_PER_HOUR)))
         tag = "vetted" if verdict == "PASS" else "borderline: " + notes
         tok = secrets.token_hex(12)
         pending[jid] = {"ts": now, "cat": cat,
