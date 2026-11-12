@@ -167,22 +167,28 @@ def llm_judge(env, job_text, draft):
     key = env.get("NANOGPT_API_KEY", "")
     if not key:
         return "UNSURE", "no judge key"
-    payload = {"model": env.get("JUDGE_MODEL", "openai/gpt-5"),
-               "max_tokens": 1500,  # gpt-5 reasons internally first
+    payload = {"model": env.get("JUDGE_MODEL", "anthropic/claude-sonnet-4.6"),
+               "max_tokens": 800,
                "response_format": {"type": "json_object"},
                "messages": [
                    {"role": "system", "content":
                     "You are a strict reviewer for an agent-work marketplace. "
-                    "Given a JOB spec and a proposed RESULT deliverable, judge "
-                    "whether the RESULT would earn a PASS verdict from a "
-                    "careful validator. Check: every stated requirement is "
-                    "covered (including exact required strings/values "
-                    "verbatim), the deliverable is concrete and correct (not "
-                    "a description of one), no fabricated references or "
-                    "guesses about unavailable resources, nothing "
-                    "contradicts the spec. Reply JSON only: "
+                    "Given a JOB spec and a proposed RESULT deliverable: "
+                    "1) Extract every stated requirement — especially the "
+                    "'Success:' line — as an explicit checklist. "
+                    "2) Verify each item is concretely present in the RESULT: "
+                    "required strings/values verbatim; runnable commands, "
+                    "queries or code — not descriptions of them. "
+                    "3) Check for fabricated references, contradictions of "
+                    "the spec, or reliance on resources the job did not "
+                    "provide. "
+                    "Verdict: PASS only if every checklist item is met; FAIL "
+                    "if any required item is missing or wrong; UNSURE only "
+                    "when requirements are ambiguous or unverifiable. "
+                    "Reply JSON only: "
                     "{\"verdict\": \"PASS\"|\"FAIL\"|\"UNSURE\", "
-                    "\"notes\": \"one short sentence\"}"},
+                    "\"notes\": \"one short sentence citing the deciding "
+                    "factor\"}"},
                    {"role": "user", "content":
                     "JOB:\n%s\n\nPROPOSED RESULT:\n%s"
                     % (job_text[:4000], draft[:2500])}]}
