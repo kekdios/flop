@@ -24,14 +24,23 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   - Containers: `flop-miner-01-worker-1`, `flop-miner-01-backend-1` (vLLM TOPLOC)
   - API: `curl -H "Authorization: Bearer $GPUAI_API_KEY" https://api.gpu.ai/v1/instances`
 
-## Current state (2026-11-10)
-- Miner software fully up; model `Qwen/Qwen2.5-0.5B-Instruct` BF16 verified
-  against on-chain `MODEL_HASH=0x1a52c1…3306`. Endpoint ad published to mailbox.
-- **BLOCKED on sponsorship**: faucet returns `429 sponsor_capacity_full`
-  (256/256 signer positions). This is devnet-side, not a config problem.
+## Current state (2026-11-12)
+- **SPONSORED + LIVE**: capacity expanded 256→1024 overnight; `*/30`
+  sponsor-retry cron caught the window ~06:30 UTC. Stake (~35 FLOP) + ops
+  (0.25) legs settled on-chain (see /var/log/flop-sponsor.log on the box).
+  Miner registered, calibrated (cap 3 GFLOP/s from 64 verified jobs),
+  serving 4-session capacity, chain-settle ON, endpoint ad published.
+- Worker upgraded v0.1.238→**v0.1.336** — devnet runtime moved to spec
+  1014020 which the old SDK can't read ("Unsupported runtime spec
+  version"; ≤1014014 qualified). The stale image also caused the "miner
+  signer is fenced after an unclassified submission failure" GPU-inventory
+  error. ALWAYS check https://flop.network/releases.json for new pins when
+  the worker misbehaves (faucet can also move the `min` floor). miner.env
+  pins by digest; refresh the box's releases.json from the same URL.
 - Miner cron `*/30` runs `/opt/flop-miner/sponsor-retry.sh` — auto-fires
-  `sponsor.sh` when `sponsor.miner.status` flips to `open` in
-  https://faucet.flop.network/limits . `*/3` runs `health.sh`.
+  `sponsor.sh` when `sponsor.miner.status` reads `open` (vocab now also
+  has `automatic_full`; capacity can sell out again so keep the retry).
+  `*/3` runs `health.sh`.
 - Miner address: `5DLMZtB5it7s6DZRmd98ABzfY8zPx9JBAAcvCtgXTL4ttSkC`
 - User submitted the FLOP miner interest form (operator-grant admission path).
 - **Kibble participation started 2026-11-10**: FLOP Labs' pre-genesis
@@ -139,7 +148,14 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   Log: /var/log/flop-chat.log.
   Rule: poster/worker/validator must be 3 different parties — never
   self-claim own JOBs.
-- **Kibble job pipeline (2026-11-12)**: `kibble-jobs.py` runs as a
+- **Kibble job pipeline (2026-11-12, STOPPED)**: `flop-kibble-jobs.service`
+  stopped+disabled after the 30-min auto window concluded — 51 fired,
+  45 tape-verified, 2 useful attests, score API still 0 (`found:false`).
+  Race structurally unwinnable vs ~1s bots at serial triage latency
+  (median JOB→CLAIM 764s). Re-enable: `systemctl enable --now
+  flop-kibble-jobs`. Ledger preserved at `/var/lib/flop-ops/kibble-jobs.json`
+  (~1551 stale backlog entries remain). Pipeline detail:
+  `kibble-jobs.py` runs as a
   **systemd daemon** (`flop-kibble-jobs.service`, flock-guarded, ~6s
   poll) — replaced the old `*/2` cron, which is commented out in
   `/etc/crontab`. Feed is incremental: `?since=<last_seq>&limit=200`
