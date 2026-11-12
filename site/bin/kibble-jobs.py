@@ -11,6 +11,7 @@ import json
 import os
 import re
 import secrets
+import subprocess
 import time
 import urllib.request
 
@@ -28,6 +29,42 @@ ATTEST_RE = re.compile(
 UA = {"User-Agent": "flop-ops/1.0"}
 MAX_PENDING = 12
 JOB_TTL = 4 * 3600
+OUR_DID_TAIL = "NQNNMt"
+AUTO_PER_RUN = 3  # max auto-fires per scanner run
+AUTO_PER_HOUR = 10
+
+POSTER = r'''
+import json, sys, time, urllib.request
+seed, claim, result, delay = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
+def post(text):
+    req = urllib.request.Request(
+        "https://kibble.world/api/act",
+        data=json.dumps({"kind": text.split(" ")[0].lower(),
+                         "text": text, "seed_hex": seed}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        urllib.request.urlopen(req, timeout=10).read()
+    except Exception:
+        pass  # writes land even when the reply drops
+time.sleep(delay)
+post(claim)
+time.sleep(3)
+post(result)
+'''
+
+
+def fire_acts(env, jid, draft, delay=0):
+    """Detached CLAIM+RESULT poster (same mechanism as kibble-approve)."""
+    seed = env.get("KIBBLE_SEED", "")
+    if not seed:
+        return False
+    subprocess.Popen(
+        ["python3", "-c", POSTER, seed,
+         "CLAIM v1 | %s | worker" % jid,
+         "RESULT v1 | %s | %s" % (jid, draft), str(delay)],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True)
+    return True
 
 
 def log(msg):
@@ -208,7 +245,8 @@ def main():
         txt = m.get("text", "").strip()
         mt = JOB_RE.match(txt)
         if mt and seq > state.get("last_seq", 0):
-            new_jobs.append((mt.group(1), mt.group(2)))
+            new_jobs.append((mt.group(1), mt.group(2),
+                             m.get("from", "")))
         at = ATTEST_RE.match(txt)
         if at:
             att_jid, att_v = at.group(1), at.group(2).lower()
@@ -237,12 +275,26 @@ def main():
                 if now - p.get("ts", 0) > JOB_TTL]:
         del pending[jid]
 
+    # Auto-approve window: judge-PASS drafts fire CLAIM+RESULT directly
+    # when KIBBLE_AUTO_UNTIL (epoch) is in the future. Capped per run and
+    # per hour; every auto-fire still emails a notification.
+    try:
+        auto_active = time.time() < float(env.get("KIBBLE_AUTO_UNTIL", "0"))
+    except (TypeError, ValueError):
+        auto_active = False
+    auto_hour = sum(
+        1 for e in ledger.values()
+        if e.get("auto") and e.get("ts", 0) > now - 3600)
+    auto_fired = 0
+
     triaged = 0
-    for jid, body in new_jobs:
+    for jid, body, sender in new_jobs:
         if jid in pending:
             continue
         if len(pending) >= MAX_PENDING or triaged >= 5:
             break
+        if OUR_DID_TAIL in sender:
+            continue  # never claim our own postings (three-party rule)
         cat = body.split("|", 1)[0].strip() if "|" in body else "-"
         draft = llm_draft(env, body)
         if draft is None:
@@ -255,20 +307,36 @@ def main():
         if verdict == "FAIL":
             log("job %s draft rejected by judge: %s" % (jid, notes))
             continue
+        auto = (auto_active and verdict == "PASS"
+                and auto_fired < AUTO_PER_RUN
+                and auto_hour < AUTO_PER_HOUR)
         tag = "vetted" if verdict == "PASS" else "borderline: " + notes
         tok = secrets.token_hex(12)
         pending[jid] = {"ts": now, "cat": cat,
                         "title": body[:200], "draft": draft,
                         "judge": verdict, "judge_notes": notes,
-                        "tok": tok, "sent": False}
+                        "tok": tok, "sent": auto}
         link = "%s?job=%s&tok=%s" % (APPROVE_BASE, jid, tok)
-        send(env, "NEW %s — %s [%s]" % (jid, cat, tag),
-             "Job %s\nCategory: %s\nJudge: %s — %s\n\n%s\n\n"
-             "--- DRAFT RESULT ---\n%s\n"
-             "\n---\nAPPROVE (claim + deliver):\n%s\n\n"
-             "Link is single-use; job entry expires in 4h."
-             % (jid, cat, verdict, notes, body[:1200], draft, link))
-        log("job %s triaged+emailed (cat=%s judge=%s)" % (jid, cat, verdict))
+        if auto:
+            ledger[jid]["auto"] = True
+            ledger[jid]["delivered"] = True
+            fire_acts(env, jid, draft, delay=auto_fired * 20)
+            auto_fired += 1
+            auto_hour += 1
+            send(env, "AUTO-FIRED %s — %s" % (jid, cat),
+                 "Auto-approved (judge PASS) and fired CLAIM+RESULT.\n\n"
+                 "Job %s\nCategory: %s\n\n%s\n\n--- RESULT SENT ---\n%s\n"
+                 % (jid, cat, body[:1200], draft))
+            log("job %s AUTO-FIRED (cat=%s)" % (jid, cat))
+        else:
+            send(env, "NEW %s — %s [%s]" % (jid, cat, tag),
+                 "Job %s\nCategory: %s\nJudge: %s — %s\n\n%s\n\n"
+                 "--- DRAFT RESULT ---\n%s\n"
+                 "\n---\nAPPROVE (claim + deliver):\n%s\n\n"
+                 "Link is single-use; job entry expires in 4h."
+                 % (jid, cat, verdict, notes, body[:1200], draft, link))
+            log("job %s triaged+emailed (cat=%s judge=%s)"
+                % (jid, cat, verdict))
         triaged += 1
         state["pending"] = pending
         state["ledger"] = ledger
