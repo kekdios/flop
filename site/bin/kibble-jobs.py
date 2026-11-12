@@ -348,6 +348,11 @@ def main():
         if verdict == "FAIL":
             log("job %s draft rejected by judge: %s" % (jid, notes))
             continue
+        if (auto_active and verdict == "UNSURE"
+                and env.get("AUTO_DROP_UNSURE")):
+            log("job %s judge UNSURE — logged, not pended (auto mode)"
+                % jid)
+            continue
         auto = (auto_active and verdict == "PASS"
                 and auto_fired < int(env.get("AUTO_PER_RUN", AUTO_PER_RUN))
                 and auto_hour < int(env.get("AUTO_PER_HOUR", AUTO_PER_HOUR)))
