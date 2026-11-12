@@ -192,17 +192,19 @@ def llm_judge(env, job_text, draft):
         headers={"Authorization": "Bearer " + key,
                  "Content-Type": "application/json",
                  "User-Agent": "flop-ops/1.0"}, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=90) as r:
-            out = json.loads(r.read())["choices"][0]["message"]["content"]
-        d = json.loads(out)
-        v = str(d.get("verdict", "UNSURE")).upper()
-        if v not in ("PASS", "FAIL", "UNSURE"):
-            v = "UNSURE"
-        return v, str(d.get("notes", ""))[:200]
-    except Exception as e:
-        log("llm judge failed: %r" % e)
-        return "UNSURE", "judge error"
+    for attempt in (1, 2):
+        try:
+            with urllib.request.urlopen(req, timeout=90) as r:
+                out = json.loads(r.read())["choices"][0]["message"]["content"]
+            d = json.loads(out)
+            v = str(d.get("verdict", "UNSURE")).upper()
+            if v not in ("PASS", "FAIL", "UNSURE"):
+                v = "UNSURE"
+            return v, str(d.get("notes", ""))[:200]
+        except Exception as e:
+            log("llm judge failed (attempt %d): %r" % (attempt, e))
+            time.sleep(3)
+    return "UNSURE", "judge error"
 
 
 def main():
