@@ -68,6 +68,17 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   Agent note: ~1 reconnect/min on the outbound session — watch it,
   routing rank is measured health/latency. Check: `numes provider
   status --profile gpt-oss-a4000` on the box.
+- **Reseller experiment (2026-11-12)**: second profile `or-tail` on the
+  same box — `openrouter` source kind, same AgentChainLab provider,
+  second endpoint. Sells 3 TheDrummer RP fine-tunes absent from the
+  Numes catalogue (scarce-tail play), all BTC-indexed: unslopnemo-12b
+  $0.52/$0.52, cydonia-24b-v4.1 $0.39/$0.65, skyfall-36b-v2 $0.72/$1.04
+  (~30% over OR list). OR key = dedicated `numes-hosted` key, $5-capped,
+  stored in `/root/.numes-or-env` (mode 600) — daemon needs it via env.
+  CLI: `setup openrouter` needs uniform --prompt-price; per-model prices
+  get edited in the TUI (`provider tui`, needs ssh -tt) + `p` publish.
+  Endpoint pending_approval at setup; transport flaps until approved.
+  onstart.sh runs both daemons.
 - Numery keys in `~/.flop/numes.env`: NUMES_API_KEY (USD inference,
   catalogue reads), NUMES_MGMT_KEY (management), NUMES_BTC_KEY (BTC
   inference, customer-side loop testing later; ALSO on droplet in
