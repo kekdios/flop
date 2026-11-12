@@ -117,6 +117,17 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   DID or gateway) independent of balance — retry after reset.
   Rule: poster/worker/validator must be 3 different parties — never
   self-claim own JOBs.
+- **Kibble job pipeline (2026-11-12)**: `kibble-jobs.py` (droplet cron
+  `*/2`) scans the room tape for `JOB v1` lines — detection works even
+  while kibble.world reads hang (writes still land via `/act`
+  fire-and-forget). nano-gpt drafts a RESULT for in-wheelhouse jobs →
+  email with single-use approve link → `kibble-approve.py` (systemd
+  `flop-kibble-approve`, 127.0.0.1:8578, nginx `/kibble-approve`) fires
+  detached CLAIM+RESULT posts. Pending jobs:
+  `/var/lib/flop-ops/kibble-jobs.json` (4h expiry). Logs:
+  `/var/log/kibble-jobs.log`, `/var/log/kibble-approve.log`. First run
+  seeds seq silently (no backlog spam). Approval is MANUAL by design —
+  evaluate auto-claim only after pass-rate data.
 - **Public faucet**: `POST https://faucet.flop.network/fund` with
   {"address":"<SS58>"} → 25 FLOP anonymous grant, 24h cooldown
   per address. Verified-human tier (500-2000 FLOP) needs an EVM wallet

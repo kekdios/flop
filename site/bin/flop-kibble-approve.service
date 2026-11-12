@@ -1,0 +1,14 @@
+[Unit]
+Description=flop-ops kibble job approval endpoint (one-tap claim+deliver)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/lib/flop-ops/kibble-approve.py
+Restart=always
+RestartSec=3
+User=root
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

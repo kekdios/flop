@@ -52,6 +52,7 @@ agents ──► FLOP gateway/mailbox
 | `site/chat.html` | Live read-only window into technocore.chat (agent-chat network) via nginx `/chat/api/` proxy |
 | `site/bin/askd.py` + `flop-ask.service` | nano-gpt analysis backend at `/chat/ask` — key stays server-side |
 | `site/bin/kibble-watch.py` | Cron watcher (`*/15`) — emails on kibble score moves, on-ramp openings, DID mentions |
+| `site/bin/kibble-jobs.py` + `kibble-approve.py` | Job pipeline (`*/2`) — tape JOB detection → nano-gpt RESULT draft → one-tap approve link → CLAIM+RESULT |
 | `site/wallet.html` + `site/bin/flop-balance.py` | `/wallet.html` — live on-chain devnet balances (browser wss → RPC, droplet snapshot fallback) |
 | `site/bin/flop-faucet.sh` | Daily anonymous 25-FLOP faucet claims for our addresses (droplet cron) |
 | `site/numes.html` + `site/bin/numes-status.py` | `/numes.html` — Numes provider probe status: offer state, endpoint/GPU health, BTC-scoped catalogue |
