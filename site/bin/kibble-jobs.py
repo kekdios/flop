@@ -95,6 +95,9 @@ def get(url, timeout=25):
 
 
 def send(env, subject, text):
+    if env.get("NOTIFY_OFF"):
+        log("email suppressed (NOTIFY_OFF): %s" % subject)
+        return
     key, to = env.get("RESEND_API_KEY", ""), env.get("ALERT_TO", "")
     if not key or not to:
         return
@@ -329,7 +332,7 @@ def main():
         if jid in pending:
             continue
         live = sum(1 for p in pending.values() if not p.get("sent"))
-        if live >= MAX_PENDING or triaged >= 5:
+        if live >= MAX_PENDING or triaged >= int(env.get("TRIAGE_PER_RUN", 5)):
             log("triage paused: live_pending=%d (cap %d) or run cap hit"
                 % (live, MAX_PENDING))
             break
