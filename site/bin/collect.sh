@@ -67,12 +67,20 @@ fi
 
 # Worker image drift: compare pinned digest on the box against releases.json.
 # Stale worker images get fenced by runtime upgrades — alert via the sig path.
+# Also track cli.latest: a new CLI build may support the current runtime spec
+# (unblocks self-custodial spend + declare-gpu) — sig change emails on bump.
 drift=$(cat /var/lib/flop-ops/last-drift 2>/dev/null || echo "?")
+cliver=$(cat /var/lib/flop-ops/last-cliver 2>/dev/null || echo "?")
 wimg=$(echo "${REMOTE:-}" | sed -n 's/^WORKER_IMG=//p')
-rel_img=$(curl -fsm10 https://flop.network/releases.json 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin).get("miner-worker",{}).get("image",""))' 2>/dev/null || true)
+rel=$(curl -fsm10 https://flop.network/releases.json 2>/dev/null | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("miner-worker",{}).get("image","")+"\t"+d.get("cli",{}).get("latest",""))' 2>/dev/null || true)
+rel_img=$(echo "$rel" | cut -f1); cli_new=$(echo "$rel" | cut -f2)
 if [ -n "$rel_img" ] && [ -n "$wimg" ]; then
   if [ "$wimg" = "$rel_img" ]; then drift="current"; else drift="STALE"; fi
   mkdir -p /var/lib/flop-ops; echo "$drift" > /var/lib/flop-ops/last-drift
+fi
+if [ -n "$cli_new" ] && [ "$cli_new" != "$cliver" ]; then
+  cliver="$cli_new"
+  mkdir -p /var/lib/flop-ops; echo "$cliver" > /var/lib/flop-ops/last-cliver
 fi
 [ "$drift" = "STALE" ] && note="${note:+$note; }worker image stale — upgrade to releases.json pin"
 
@@ -93,7 +101,7 @@ cat > "$OUT" <<JSON
 "sessions":"$sess","sessions_state":"$sess_state",
 "spend":"$spend","spend_state":"",
 "kibble":"$kib","kibble_state":"$kib_state",
-"endpoint":"$ep","endpoint_state":"$ep_state","drift":"$drift","note":"$note"}
+"endpoint":"$ep","endpoint_state":"$ep_state","drift":"$drift","cli":"$cliver","note":"$note"}
 JSON
 mv "$OUT" "$SITE/status.json"
 
@@ -101,7 +109,7 @@ mv "$OUT" "$SITE/status.json"
 # Signature stored in /var/lib/flop-ops/last-sig; first run seeds it silently.
 STATE_DIR=/var/lib/flop-ops
 case "$sess" in *[1-9]*) sess_bucket=live;; *) sess_bucket=idle;; esac
-sig="$miner_state|$gpu_state|$cal|$sess_bucket|$drift"
+sig="$miner_state|$gpu_state|$cal|$sess_bucket|$drift|cli:$cliver"
 mkdir -p "$STATE_DIR"
 prev=$(cat "$STATE_DIR/last-sig" 2>/dev/null || true)
 if [ "$sig" != "$prev" ]; then

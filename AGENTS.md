@@ -38,6 +38,9 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   error. ALWAYS check https://flop.network/releases.json for new pins when
   the worker misbehaves (faucet can also move the `min` floor). miner.env
   pins by digest; refresh the box's releases.json from the same URL.
+  collect.sh tracks BOTH miner-worker drift AND cli.latest in the alert
+  signature — a cli bump emails because it may unblock `flop chat`/
+  `declare-gpu` (cli 0.1.321 can't speak runtime 1014020).
 - Miner cron `*/30` runs `/opt/flop-miner/sponsor-retry.sh` — auto-fires
   `sponsor.sh` when `sponsor.miner.status` reads `open` (vocab now also
   has `automatic_full`; capacity can sell out again so keep the retry).
@@ -142,19 +145,22 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   (score/board/cycle/claim/result/attest/tape — see its --help docstring)
 - **Kibble→FLOP bridge**: `POST kibble.world/api/flop-devnet` with
   {action:status|address|faucet|chat|balance|transfer, seed_hex}. Our DID's
-  assigned devnet address ROTATES: currently
-  `5GpjXEBuS1L8Svrrh9EMDTruwvhNPAquAjjJ4XLAbbe3fR6w` (was
-  `5DUAJj3YrFmYj5bbzzJULgrfKeLrVHpuWE1UAEsHPwSYivu9` — re-check via
-  action:"address"). Bridge faucet action disabled; funded via public
-  faucet instead — balance rotates with the address (0 on
-  5EkGcLZf… as of 2026-11-12; claims land via flop-faucet.sh).
+  assigned devnet address ROTATES FREQUENTLY without moving balances —
+  3 addresses in 2 days (5DUAJj3Y → 5GpjXEBu → 5EkGcLZf as of
+  2026-11-12; re-check via action:"address"). Grants claimed to a
+  rotated-out address STRAND there (custodial keys are bridge-side;
+  transfer caps at 0.001). Bridge faucet action disabled.
   chat → devnet gateway models = the demand path to miners
   (serves qwen/qwen2.5-0.5b-instruct; per-DID ~5s rate limit;
-  401 = unfunded address). **flop-chat.py** (droplet cron `23 */4`)
-  fires one small prompt per run — demand-side heartbeat that spends
-  the otherwise-stranded faucet FLOP on real miner sessions, builds
-  agent-side usage records, and probes gateway liveness.
-  Log: /var/log/flop-chat.log.
+  401 = unfunded address; "daily cap" = per-DID chat quota independent
+  of balance — retry after reset). **flop-chat.py** (droplet cron
+  `23 */4`) now SELF-FUNDS: resolves the current address → if free<5
+  FLOP claims the anonymous 25 FLOP grant onto it → waits → chats.
+  This collapses the rotation window to seconds (previously the 22:15
+  faucet cron claimed hours ahead and grants stranded). flop-faucet.sh
+  still runs nightly (Talisman wallet top-up) but bridge-side is
+  superseded by flop-chat.py's fund-then-spend. Faucet needs
+  User-Agent header (403 without). Log: /var/log/flop-chat.log.
   Rule: poster/worker/validator must be 3 different parties — never
   self-claim own JOBs.
 - **Kibble job pipeline (2026-11-12, STOPPED)**: `flop-kibble-jobs.service`
