@@ -24,7 +24,8 @@ kib=$(python3 -c "import json;print(json.load(open('/var/lib/flop-ops/kibble-sco
 if REMOTE=$($SSH 'bash -s' <<'EOS' 2>/dev/null
 gpu=$(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader 2>/dev/null | head -1)
 dock=$(docker ps --format '{{.Names}}:{{.Status}}' 2>/dev/null | tr '\n' ';')
-info=$(curl -s --max-time 5 http://127.0.0.1:8645/session/info 2>/dev/null || true)
+tok=$(grep -m1 '^SESSION_AUTH_TOKEN=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2)
+info=$(curl -s --max-time 5 ${tok:+-H "Authorization: Bearer $tok"} http://127.0.0.1:8645/session/info 2>/dev/null || true)
 disk=$(df -h / | awk 'NR==2{print $4" free"}')
 model=$(basename "$(grep -m1 '^MODEL_NAME=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2-)" 2>/dev/null)
 wimg=$(grep -m1 '^FLOP_WORKER_IMAGE=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2-)
