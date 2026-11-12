@@ -20,20 +20,19 @@ LISTEN = ("127.0.0.1", 8578)
 
 POSTER = r'''
 import json, sys, time, urllib.request
-seed, claim, result = sys.argv[1], sys.argv[2], sys.argv[3]
-def post(text):
+seed, jid, result = sys.argv[1], sys.argv[2], sys.argv[3]
+def post(payload):
     req = urllib.request.Request(
         "https://kibble.world/api/act",
-        data=json.dumps({"kind": text.split(" ")[0].lower(),
-                         "text": text, "seed_hex": seed}).encode(),
+        data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json"}, method="POST")
     try:
         urllib.request.urlopen(req, timeout=10).read()
     except Exception:
         pass  # writes land even when the reply drops
-post(claim)
+post({"kind": "claim", "job_id": jid, "seed_hex": seed})
 time.sleep(3)
-post(result)
+post({"kind": "result", "job_id": jid, "body": result, "seed_hex": seed})
 '''
 
 
@@ -99,10 +98,8 @@ class Handler(BaseHTTPRequestHandler):
                                    "KIBBLE_SEED missing on the droplet.",
                                    False), 500)
 
-        claim = "CLAIM v1 | %s | worker" % jid
-        result = "RESULT v1 | %s | %s" % (jid, p.get("draft", ""))
         subprocess.Popen(
-            ["python3", "-c", POSTER, seed, claim, result],
+            ["python3", "-c", POSTER, seed, jid, p.get("draft", "")],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             start_new_session=True)
 

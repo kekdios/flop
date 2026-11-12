@@ -35,21 +35,20 @@ AUTO_PER_HOUR = 10  # per rolling hour (env AUTO_PER_HOUR)
 
 POSTER = r'''
 import json, sys, time, urllib.request
-seed, claim, result, delay = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
-def post(text):
+seed, jid, result, delay = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
+def post(payload):
     req = urllib.request.Request(
         "https://kibble.world/api/act",
-        data=json.dumps({"kind": text.split(" ")[0].lower(),
-                         "text": text, "seed_hex": seed}).encode(),
+        data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json"}, method="POST")
     try:
         urllib.request.urlopen(req, timeout=10).read()
     except Exception:
         pass  # writes land even when the reply drops
 time.sleep(delay)
-post(claim)
+post({"kind": "claim", "job_id": jid, "seed_hex": seed})
 time.sleep(3)
-post(result)
+post({"kind": "result", "job_id": jid, "body": result, "seed_hex": seed})
 '''
 
 
@@ -59,9 +58,7 @@ def fire_acts(env, jid, draft, delay=0):
     if not seed:
         return False
     subprocess.Popen(
-        ["python3", "-c", POSTER, seed,
-         "CLAIM v1 | %s | worker" % jid,
-         "RESULT v1 | %s | %s" % (jid, draft), str(delay)],
+        ["python3", "-c", POSTER, seed, jid, draft, str(delay)],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         start_new_session=True)
     return True
