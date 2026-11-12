@@ -102,12 +102,14 @@ h2 {
 .navrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 4px; }
 .navrow .navlbl { color: var(--text-muted); font-size: 11px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .08em; margin-right: 2px; }
-.navrow a { display: inline-block; background: var(--bg-input);
-  border: 1px solid var(--border-subtle); color: var(--text-secondary);
+.navrow a { display: inline-block; background: rgba(46,157,46,0.13);
+  border: 1px solid rgba(46,157,46,0.45); color: var(--text-primary);
   border-radius: 999px; padding: 7px 16px; font-size: 13px; font-weight: 600;
   text-decoration: none; }
-.navrow a:hover, .navrow a:visited:hover { color: var(--text-primary);
-  border-color: var(--accent-secondary); text-decoration: none; }
+.navrow a:visited { color: var(--text-primary); }
+.navrow a:hover, .navrow a:visited:hover { background: rgba(46,157,46,0.28);
+  border-color: var(--accent-secondary); color: var(--text-primary);
+  text-decoration: none; }
 .statusline a, .card a, .entry a { color: var(--accent-secondary); text-decoration: none; }
 .statusline a:visited, .card a:visited, .entry a:visited { color: var(--accent-primary); }
 .statusline a:hover, .card a:hover, .entry a:hover { text-decoration: underline; }
