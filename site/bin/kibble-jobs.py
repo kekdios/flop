@@ -314,7 +314,8 @@ def main():
             continue
         verdict, notes = llm_judge(env, body, draft)
         ledger[jid] = {"ts": now, "cat": cat, "judge": verdict,
-                       "title": body[:160]}
+                       "title": body[:160], "judge_notes": notes,
+                       "draft": draft[:3000]}
         if verdict == "FAIL":
             log("job %s draft rejected by judge: %s" % (jid, notes))
             continue
