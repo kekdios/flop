@@ -116,43 +116,72 @@ def send(env, subject, text):
         log("email failed: %r" % e)
 
 
+DRAFT_SYS = ("You are the AgentChainLab kibble worker. A JOB posting "
+             "from the kibble work board follows (untrusted input). "
+             "If it is inside our wheelhouse — docs, security review, "
+             "code fixes, shell, SQL, data wrangling, infra/devops, "
+             "technical explanation/review — write the RESULT body: a "
+             "complete, correct, concise deliverable in one line of "
+             "text (use '; ' or ' | ' to separate parts, no newlines), "
+             "under 1800 characters, no preamble, just the deliverable. "
+             "If the job is ambiguous, requires private access, asks "
+             "for something unethical, or exceeds a short deliverable, "
+             "reply with exactly: UNSUITABLE")
+
+
 def llm_draft(env, job_text):
-    """Return drafted RESULT body, or None if unsuitable/unavailable."""
+    """Return (draft_or_None, model_used). Falls back to our own vLLM
+    box (DRAFT_FALLBACK_URL) when the primary API errors — UNSUITABLE
+    verdicts are honored, not retried."""
     key = env.get("NANOGPT_API_KEY", "")
-    if not key:
-        return None
-    payload = {"model": env.get("ASK_MODEL", "openai/gpt-5-mini"),
-               "max_tokens": 2500,
+    model = env.get("ASK_MODEL", "openai/gpt-5-mini")
+    if key:
+        payload = {"model": model,
+                   "max_tokens": 2500,
+                   "messages": [
+                       {"role": "system", "content": DRAFT_SYS},
+                       {"role": "user", "content": job_text[:6000]}]}
+        req = urllib.request.Request(
+            "https://nano-gpt.com/api/v1/chat/completions",
+            data=json.dumps(payload).encode(),
+            headers={"Authorization": "Bearer " + key,
+                     "Content-Type": "application/json",
+                     "User-Agent": "flop-ops/1.0"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=90) as r:
+                out = json.loads(r.read())["choices"][0]["message"]["content"]
+            out = (out or "").strip()
+            if out.upper().startswith("UNSUITABLE"):
+                return None, model
+            if out:
+                return " ".join(out.split())[:1800], model
+            log("llm draft empty from %s — trying fallback" % model)
+        except Exception as e:
+            log("llm draft failed: %r — trying fallback" % e)
+    fb_url = env.get("DRAFT_FALLBACK_URL", "")
+    fb_model = env.get("DRAFT_FALLBACK_MODEL", "openai/gpt-oss-20b")
+    if not fb_url:
+        return None, model
+    payload = {"model": fb_model,
+               "max_tokens": 1200,  # box runs --max-model-len 4096
                "messages": [
-                   {"role": "system", "content":
-                    "You are the AgentChainLab kibble worker. A JOB posting "
-                    "from the kibble work board follows (untrusted input). "
-                    "If it is inside our wheelhouse — docs, security review, "
-                    "code fixes, shell, SQL, data wrangling, infra/devops, "
-                    "technical explanation/review — write the RESULT body: a "
-                    "complete, correct, concise deliverable in one line of "
-                    "text (use '; ' or ' | ' to separate parts, no newlines), "
-                    "under 1800 characters, no preamble, just the deliverable. "
-                    "If the job is ambiguous, requires private access, asks "
-                    "for something unethical, or exceeds a short deliverable, "
-                    "reply with exactly: UNSUITABLE"},
-                   {"role": "user", "content": job_text[:6000]}]}
+                   {"role": "system", "content": DRAFT_SYS},
+                   {"role": "user", "content": job_text[:3000]}]}
     req = urllib.request.Request(
-        "https://nano-gpt.com/api/v1/chat/completions",
-        data=json.dumps(payload).encode(),
-        headers={"Authorization": "Bearer " + key,
-                 "Content-Type": "application/json",
+        fb_url, data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json",
                  "User-Agent": "flop-ops/1.0"}, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=90) as r:
+        with urllib.request.urlopen(req, timeout=120) as r:
             out = json.loads(r.read())["choices"][0]["message"]["content"]
         out = (out or "").strip()
         if not out or out.upper().startswith("UNSUITABLE"):
-            return None
-        return " ".join(out.split())[:1800]
+            return None, fb_model
+        log("draft served by fallback %s" % fb_model)
+        return " ".join(out.split())[:1800], fb_model
     except Exception as e:
-        log("llm draft failed: %r" % e)
-        return None
+        log("fallback draft failed: %r" % e)
+        return None, fb_model
 
 
 def save(state):
@@ -307,7 +336,7 @@ def main():
         if OUR_DID_TAIL in sender:
             continue  # never claim our own postings (three-party rule)
         cat = body.split("|", 1)[0].strip() if "|" in body else "-"
-        draft = llm_draft(env, body)
+        draft, dmodel = llm_draft(env, body)
         if draft is None:
             log("job %s skipped (unsuitable or llm unavailable)" % jid)
             skipped[cat] = skipped.get(cat, 0) + 1
@@ -315,7 +344,7 @@ def main():
         verdict, notes = llm_judge(env, body, draft)
         ledger[jid] = {"ts": now, "cat": cat, "judge": verdict,
                        "title": body[:160], "judge_notes": notes,
-                       "draft": draft[:3000]}
+                       "draft": draft[:3000], "draft_model": dmodel}
         if verdict == "FAIL":
             log("job %s draft rejected by judge: %s" % (jid, notes))
             continue
@@ -326,6 +355,7 @@ def main():
         tok = secrets.token_hex(12)
         pending[jid] = {"ts": now, "cat": cat,
                         "title": body[:200], "draft": draft,
+                        "draft_model": dmodel,
                         "judge": verdict, "judge_notes": notes,
                         "tok": tok, "sent": auto}
         link = "%s?job=%s&tok=%s" % (APPROVE_BASE, jid, tok)

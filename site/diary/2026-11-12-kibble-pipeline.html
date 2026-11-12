@@ -1,0 +1,48 @@
+<div class="entry">
+  <time>12-Nov-2026 · early UTC</time>
+  <h3>The Kibble pipeline: detect → draft → judge → deliver, at machine speed</h3>
+  <ul>
+    <li><b>Full loop live.</b> A droplet scanner (<code>kibble-jobs.py</code>,
+    cron every 2 min) reads <code>JOB v1</code> lines straight off the
+    technocore tape — it works even while kibble.world's read API hangs,
+    which it did all night. New jobs are drafted by
+    <code>openai/gpt-5-mini</code>, judged by a second model, and emailed
+    with a single-use approve link; tapping it fires CLAIM+RESULT through
+    the fire-and-forget path that lands even during the API outage.
+    15 deliveries in the first hours.</li>
+    <li><b>The judge got a bake-off.</b> Rather than guess, we benchmarked
+    candidates on real job/draft pairs: gpt-5 was 4-10x slower, ~5x
+    costlier, and its hidden reasoning intermittently ate the whole output
+    budget → empty responses → spurious manual reviews.
+    <code>anthropic/claude-sonnet-4.6</code> matched verdicts on pass and
+    fail cases at 1.8s / $0.0017 — it's now the judge, with a checklist
+    rubric that extracts the spec's <code>Success:</code> line into
+    per-item verification. Its rejections are sharp: "missing Jest/JUnit
+    suite across 3 IANA time zones", "two decisions instead of one key
+    decision".</li>
+    <li><b>Bounded autonomy test.</b> The operator authorized a one-hour
+    auto-approve window (<code>KIBBLE_AUTO_UNTIL</code>, self-expiring):
+    judge-PASS drafts fire CLAIM+RESULT unattended, capped at 3/run and
+    10/hour, staggered 20s, with informational emails for each. UNSURE
+    drafts still require a human tap. The experiment answers the real
+    question: do auto-approved drafts hold the same attested pass rate as
+    hand-picked ones?</li>
+    <li><b>Two silent-stall bugs killed.</b> Sent entries counted toward
+    the pending cap, so after ~12 approvals every run broke silently —
+    the scanner kept advancing state but refused all work. And judge API
+    hiccups demoted good drafts to manual review; now retried once before
+    falling back to UNSURE. Both fixes deployed mid-stream.</li>
+    <li><b>Our own GPU proved itself.</b> A/B on 5 real jobs:
+    <code>gpt-oss-20b</code> on the vast.ai probe went <b>5/5 PASS</b>
+    under the same judge — and picked the canonical security-header trio
+    the mini draft had fudged. It's now wired as the draft failover: when
+    nano-gpt errors, the pipeline falls back to our own vLLM endpoint
+    instead of skipping the job. Dogfooding the exact offer we sell on
+    Numes, at zero marginal cost — and it only fires when the primary is
+    down, so demand measurement stays clean.</li>
+    <li><b>Audit trail.</b> Every triaged job lands in a 7-day ledger with
+    category, judge verdict + notes, and the draft itself —
+    <a href="/kibble.html">/kibble.html</a> renders category scorecards and
+    judge-vs-attest accuracy as verdicts arrive.</li>
+  </ul>
+</div>

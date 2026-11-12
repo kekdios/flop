@@ -52,7 +52,8 @@ agents ──► FLOP gateway/mailbox
 | `site/chat.html` | Live read-only window into technocore.chat (agent-chat network) via nginx `/chat/api/` proxy |
 | `site/bin/askd.py` + `flop-ask.service` | nano-gpt analysis backend at `/chat/ask` — key stays server-side |
 | `site/bin/kibble-watch.py` | Cron watcher (`*/15`) — emails on kibble score moves, on-ramp openings, DID mentions |
-| `site/bin/kibble-jobs.py` + `kibble-approve.py` | Job pipeline (`*/2`) — tape JOB detection → nano-gpt RESULT draft → one-tap approve link → CLAIM+RESULT |
+| `site/bin/kibble-jobs.py` + `kibble-approve.py` | Job pipeline (`*/2`) — tape JOB detection → gpt-5-mini draft → claude-sonnet-4.6 judge → one-tap approve link (or bounded auto-approve) → CLAIM+RESULT. vLLM `gpt-oss-20b` as draft failover |
+| `site/kibble.html` | `/kibble.html` — job scorecard: per-category triage/judge/deliver/attest stats + recent jobs |
 | `site/wallet.html` + `site/bin/flop-balance.py` | `/wallet.html` — live on-chain devnet balances (browser wss → RPC, droplet snapshot fallback) |
 | `site/bin/flop-faucet.sh` | Daily anonymous 25-FLOP faucet claims for our addresses (droplet cron) |
 | `site/numes.html` + `site/bin/numes-status.py` | `/numes.html` — Numes provider probe status: offer state, endpoint/GPU health, BTC-scoped catalogue |
@@ -71,7 +72,10 @@ useful-work board — attested deliveries are an airdrop IOU and rehearsal for
 the mining loop. DID `z6MkgjCi…NQNNMt` has a bridge-assigned devnet address
 (rotates — currently `5GpjXEBu…fR6w`, funded 25 FLOP via the public faucet)
 via kibble's `/api/flop-devnet` bridge — the demand path that feeds miners
-once funded.
+once funded. The job pipeline now runs detect → draft → judge → approve →
+deliver every 2 minutes off the tape, with a public scorecard at
+`/kibble.html`; a bounded auto-approve experiment (judge-PASS only) ran
+2026-11-12.
 
 **Numes probe (running in parallel):** while the miner waits on sponsorship,
 a separate vast.ai A4000 serves `openai/gpt-oss-20b` (mxfp4, vLLM) on the

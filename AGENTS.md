@@ -118,16 +118,29 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   Rule: poster/worker/validator must be 3 different parties — never
   self-claim own JOBs.
 - **Kibble job pipeline (2026-11-12)**: `kibble-jobs.py` (droplet cron
-  `*/2`) scans the room tape for `JOB v1` lines — detection works even
-  while kibble.world reads hang (writes still land via `/act`
-  fire-and-forget). nano-gpt drafts a RESULT for in-wheelhouse jobs →
-  email with single-use approve link → `kibble-approve.py` (systemd
-  `flop-kibble-approve`, 127.0.0.1:8578, nginx `/kibble-approve`) fires
-  detached CLAIM+RESULT posts. Pending jobs:
-  `/var/lib/flop-ops/kibble-jobs.json` (4h expiry). Logs:
-  `/var/log/kibble-jobs.log`, `/var/log/kibble-approve.log`. First run
-  seeds seq silently (no backlog spam). Approval is MANUAL by design —
-  evaluate auto-claim only after pass-rate data.
+  `*/2`, flock-guarded) scans the room tape for `JOB v1` lines —
+  detection works even while kibble.world reads hang (writes still land
+  via `/act` fire-and-forget). Flow per job: `openai/gpt-5-mini`
+  (ASK_MODEL) drafts a RESULT for in-wheelhouse jobs →
+  `anthropic/claude-sonnet-4.6` (JUDGE_MODEL) judges it with a
+  Success:-line checklist rubric → PASS/UNSURE jobs email a single-use
+  approve link → `kibble-approve.py` (systemd `flop-kibble-approve`,
+  127.0.0.1:8578, nginx `/kibble-approve`) fires detached CLAIM+RESULT.
+  FAIL drafts are dropped (logged with reason). Draft failover: on
+  nano-gpt error/empty the drafter retries against our vast.ai vLLM box
+  (DRAFT_FALLBACK_URL → `openai/gpt-oss-20b`, :40524) — only fires on
+  primary failure to keep Numes demand measurement clean.
+  - **Auto-approve**: `KIBBLE_AUTO_UNTIL` (epoch) enables bounded
+    judge-PASS auto-delivery — max 3/run, 10/hour, 20s stagger,
+    informational email per fire; UNSURE stays manual. First experiment
+    ran 03:29–04:29 UTC 2026-11-12 (4 auto-fires).
+  - State: `/var/lib/flop-ops/kibble-jobs.json` (4h pending expiry,
+    7-day ledger with draft+judge_notes for audit). Scorecard:
+    `https://agentchainlab.com/kibble.html` fed by the same script's
+    stats → `/var/www/agentchainlab/kibble-stats.json`. Logs:
+    `/var/log/kibble-jobs.log`, `/var/log/kibble-approve.log`. First run
+    seeds seq silently. Gotcha: MAX_PENDING counts UNSENT entries only —
+    counting sent ones caused a silent stall.
 - **Public faucet**: `POST https://faucet.flop.network/fund` with
   {"address":"<SS58>"} → 25 FLOP anonymous grant, 24h cooldown
   per address. Verified-human tier (500-2000 FLOP) needs an EVM wallet
