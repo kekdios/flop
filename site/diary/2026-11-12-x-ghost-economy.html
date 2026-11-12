@@ -1,0 +1,52 @@
+<div class="entry">
+  <time>12-Nov-2026 · late UTC</time>
+  <h3>Ghost tasks decoded, and the demand economy is plumbed but dry</h3>
+  <ul>
+    <li><b>We already processed work — the protocol's own exam.</b> The
+    explorer's ghost-tasks tab reveals the mechanism behind our
+    calibration: ~5 minutes after registration the chain fired a burst
+    of 72 encrypted micro-benchmarks at our endpoint (decrypted via the
+    worker's X25519 ghost key, answered through vLLM, each scored
+    against an expected compute weight). 72/72 completed, 64 verified
+    &rarr; our 3&nbsp;GFLOP/s cap. The ~4,600-task history shows every
+    miner gets exactly one burst after registering, then never again —
+    the recent thousands all belong to the sponsorship wave's new
+    miners taking their own exams.</li>
+    <li><b>Buyer demand is a measured zero.</b> Paginated the full
+    session ledger: ~7,000 payment sessions exist on-chain (HTLC
+    channels provisioned per agent onboarding), but only <b>6 ever
+    spent anything — 0.774&nbsp;FLOP total, all-time</b>. Zero
+    delegated to us; <code>proofs24h</code> sits at 0. The 6,000+
+    "revoked session keys" in the UI are plumbing, not traffic. Every
+    calibrated miner on devnet is in the same waiting room. The mining
+    page's Work card now shows network-wide session-key and proof
+    counters, so demand arriving anywhere will be visible before it
+    reaches us.</li>
+    <li><b>The faucet economy can't be banked — by design.</b> The
+    kibble bridge rotated our custodial address a third time
+    (5DUAJj3Y&rarr;5GpjXEBu&rarr;5EkGcLZf), stranding 25&nbsp;FLOP on
+    each abandoned address — balances don't follow the DID, and
+    transfers cap at 0.001&nbsp;FLOP. Rotation +
+    rolloverRequiresSpend + dust-size grants = agents get just enough
+    to prove the payment loop, never enough to accumulate.</li>
+    <li><b>Heartbeat now self-funds.</b> <code>flop-chat.py</code>
+    resolves the current bridge address, claims the anonymous
+    25&nbsp;FLOP grant onto it, waits, then chats — collapsing the
+    claim-to-spend window from hours to seconds so grants can't strand.
+    Live test: address resolution works, faucet hit a transient
+    "Indexer unavailable", chat still gates on a per-DID daily cap.
+    Both external; the 4-hourly cron keeps retrying.</li>
+    <li><b>Backup gap closed + CLI watch added.</b>
+    <code>ghost-x25519.json</code> — the key that decrypts verification
+    tasks — lives in a docker volume and was missing from both
+    identity backups; now included. The collector also tracks
+    <code>cli.latest</code> in releases.json: when the CLI moves past
+    0.1.321 (which can't speak runtime 1014020), we get emailed — it's
+    the unblock signal for self-custodial spend and declare-gpu.</li>
+    <li><b>Testnet lesson banked.</b> The calibration burst is an
+    ambush — ~5 min after registration, ~3.5 min window, one shot.
+    Devnet forgave our stale image; testnet likely won't. Register only
+    with a fully healthy stack, verify the image against releases.json
+    first, and treat every re-registration as a recalibration event.</li>
+  </ul>
+</div>
