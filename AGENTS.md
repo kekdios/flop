@@ -26,8 +26,9 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 
 ## Current state (2026-11-12)
 - **SPONSORED + LIVE**: capacity expanded 256→1024 overnight; `*/30`
-  sponsor-retry cron caught the window ~06:30 UTC. Stake (~35 FLOP) + ops
-  (0.25) legs settled on-chain (see /var/log/flop-sponsor.log on the box).
+  sponsor-retry cron caught the window ~06:30 UTC. Stake (~35,000 FLOP) +
+  ops (250) legs settled on-chain (see /var/log/flop-sponsor.log on the
+  box; amounts are raw/1e18).
   Miner registered, calibrated (cap 3 GFLOP/s from 64 verified jobs),
   serving 4-session capacity, chain-settle ON, endpoint ad published.
 - Worker upgraded v0.1.238→**v0.1.336** — devnet runtime moved to spec
@@ -42,6 +43,12 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   has `automatic_full`; capacity can sell out again so keep the retry).
   `*/3` runs `health.sh`.
 - Miner address: `5DLMZtB5it7s6DZRmd98ABzfY8zPx9JBAAcvCtgXTL4ttSkC`
+- **Mining status page**: `/mining.html` ← `flop-mining.py` collector
+  (`/usr/local/lib/flop-ops/`, cron `*/5`) → `/var/www/agentchainlab/
+  mining.json`. Pulls auth'd `/session/info`, worker log events,
+  sponsor legs, containers, GPU. Backup of miner identity (signer,
+  miner-key.json, session-keys): `/var/lib/flop-ops/miner-identity-backup/`
+  on the droplet + `~/.flop/miner-backup-5DLM/` locally.
 - User submitted the FLOP miner interest form (operator-grant admission path).
 - **Kibble participation started 2026-11-10**: FLOP Labs' pre-genesis
   useful-work board (attested work = airdrop IOU, "practice for the FLOP

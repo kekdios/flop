@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgentChainLab — devnet mining</title>
+<meta name="description" content="FLOP devnet miner status: sponsorship, calibration, session capacity, worker activity." />
+<link rel="icon" type="image/png" href="/assets/icon_flask.png" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg-main: #0a1a29; --bg-card: #0f2840; --bg-input: #071521;
+  --accent-secondary: #2e9d2e; --text-primary: #FFFFFF;
+  --text-secondary: #B0B3B8; --text-muted: #6B6F76;
+  --border-subtle: rgba(31, 74, 85, 0.6);
+  --warn: #e8a33d; --bad: #e05563;
+  --font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { min-height: 100vh; font-family: var(--font-family); font-size: 14px;
+  background: var(--bg-main); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+.topHeader { display: flex; align-items: center; padding: 14px 22px;
+  border-bottom: 1px solid var(--border-subtle); background: var(--bg-card); }
+.brandLink { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brandLogo { height: 34px; width: auto; }
+.brandName { color: var(--text-primary); font-weight: 700; font-size: 17px; }
+.brandSub { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+.backBtn { margin-left: auto; display: inline-block; background: var(--bg-input);
+  border: 1px solid var(--border-subtle); color: var(--text-secondary);
+  border-radius: 999px; padding: 7px 16px; font-size: 13px; font-weight: 600; text-decoration: none; }
+.backBtn:hover { color: var(--text-primary); border-color: var(--accent-secondary); }
+main { width: min(900px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
+.liveRow { display: flex; align-items: center; gap: 8px; margin: 14px 0 16px; }
+.pulseDot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-secondary);
+  box-shadow: 0 0 0 0 rgba(46,157,46,.6); animation: pulse 2s infinite; }
+.pulseDot.warn { background: var(--warn); box-shadow: none; animation: none; }
+.pulseDot.down { background: var(--bad); box-shadow: none; animation: none; }
+@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(46,157,46,.5)} 70%{box-shadow:0 0 0 9px rgba(46,157,46,0)} 100%{box-shadow:0 0 0 0 rgba(46,157,46,0)} }
+.liveText { color: var(--text-secondary); font-size: 13px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.card { background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 12px; padding: 14px 16px; }
+.card .lbl { color: var(--text-muted); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .08em; font-weight: 700; }
+.card .big { font-size: 24px; font-weight: 700; margin: 6px 0 2px; }
+.card .sub { color: var(--text-secondary); font-size: 12px; margin-top: 4px; }
+.ok { color: var(--accent-secondary); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+.section { color: var(--text-muted); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .08em; font-weight: 700; margin: 22px 0 10px; }
+table { width: 100%; border-collapse: collapse; background: var(--bg-card);
+  border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden; }
+th, td { text-align: left; padding: 8px 12px; font-size: 12.5px;
+  border-bottom: 1px solid var(--border-subtle); }
+th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+td { color: var(--text-secondary); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+td.k { color: var(--text-muted); white-space: nowrap; width: 180px; }
+.note { color: var(--text-muted); font-size: 12px; margin: 16px 0 0; line-height: 1.6; }
+.note a { color: var(--accent-secondary); text-decoration: none; }
+.note code { background: var(--bg-input); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+.statusline { color: var(--text-muted); font-size: 12px; margin: 10px 0 0; }
+.statusline a { color: var(--accent-secondary); text-decoration: none; }
+</style>
+</head>
+<body>
+<header class="topHeader">
+  <a href="/" class="brandLink">
+    <img src="/assets/agentchainlab_nb.png" alt="AgentChainLab" class="brandLogo" />
+    <span class="brandName">AgentChainLab</span>
+    <span class="brandSub">/ devnet mining</span>
+  </a>
+  <a href="/" class="backBtn">← Back</a>
+</header>
+<main>
+  <div class="liveRow">
+    <span class="pulseDot" id="live-dot"></span>
+    <span class="liveText" id="status">loading…</span>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="section">Registration &amp; sponsorship</div>
+  <table><tbody id="reg-body"><tr><td>loading…</td></tr></tbody></table>
+
+  <div class="section">Worker activity (recent log events)</div>
+  <table>
+    <thead><tr><th style="width:170px">Timestamp (UTC)</th><th>Event</th></tr></thead>
+    <tbody id="ev-body"><tr><td colspan="2">loading…</td></tr></tbody>
+  </table>
+
+  <p class="note">
+    This miner serves <b>session-serving mode (Mode A, chain-settle)</b> on
+    the FLOP devnet: buyers open sessions, the worker answers with the
+    registered model, and settlement happens on-chain. Devnet FLOP is test
+    value — the official docs state devnet earns no rewards and no airdrop
+    weight; it exists to prove the setup before testnet. Stake shown is
+    <b>network-sponsored</b>, not ours. "Verified jobs" and the calibration
+    cap are chain-side facts reported by the worker. Data from
+    <code>/mining.json</code>, refreshed every 5 minutes by
+    <code>flop-mining.py</code>; "worker image" is checked against
+    <code>flop.network/releases.json</code> — a stale image gets fenced by
+    runtime upgrades.
+  </p>
+  <p class="statusline">Back to the <a href="/">ops board</a>.</p>
+</main>
+<script>
+(function () {
+  var statusEl = document.getElementById('status');
+  var dotEl = document.getElementById('live-dot');
+  function esc(s) { var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function card(lbl, big, cls, sub) {
+    return '<div class="card"><div class="lbl">' + esc(lbl) + '</div>' +
+      '<div class="big ' + cls + '">' + big + '</div>' +
+      (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; }
+  function short(x, n) { if (!x) return '—'; x = String(x);
+    return x.length > (n || 18) ? x.slice(0, (n || 18) / 2) + '…' +
+      x.slice(-(n || 18) / 2) : x; }
+
+  fetch('/mining.json?_=' + Date.now()).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function (d) {
+    if (d.error) { statusEl.textContent = 'collector error: ' + d.error +
+      ' — last good ' + (d.updated || '?'); dotEl.className = 'pulseDot down'; }
+    else { statusEl.textContent = 'snapshot ' + (d.updated || '?') +
+      (d.info_stale ? ' — session endpoint read failed, showing last-good values' : '');
+      dotEl.className = d.info_stale ? 'pulseDot warn' : 'pulseDot'; }
+
+    var cal = d.calibration || {}, sv = d.serving || {},
+        idn = d.identity || {}, sp = d.sponsorship || {};
+    var calCls = cal.ready ? 'ok' : (cal.state ? 'warn' : 'bad');
+    var cards = card('Calibration',
+      cal.state ? esc(cal.state) : '—', calCls,
+      (cal.cap_gflops != null ? 'cap ' + cal.cap_gflops + ' GFLOP/s' : '') +
+      (cal.verified_jobs != null ? ' · ' + cal.verified_jobs + ' verified jobs' : ''));
+    cards += card('Sessions',
+      sv.sessions != null ? String(sv.sessions) : '0',
+      sv.sessions > 0 ? 'ok' : 'warn',
+      (sv.capacity_sessions != null ? 'capacity ' + sv.capacity_sessions +
+        ' sessions · ' + sv.capacity_gn + ' G_n/s' : 'capacity unknown') +
+      (sv.is_ready ? '' : ' · session host not ready yet'));
+    cards += card('Sponsorship',
+      sp.settled ? 'settled' : '—', sp.settled ? 'ok' : 'warn',
+      (sp.legs || []).map(function (l) {
+        return l.kind + ' ' + l.flop + ' FLOP'; }).join(' · ') ||
+      'no legs recorded');
+    cards += card('Worker image',
+      'v' + (idn.image || '?'), idn.drift === 'STALE' ? 'bad' : 'ok',
+      'releases.json drift: ' + (idn.drift || '?'));
+    var gpu = (d.hardware && d.hardware.gpu || '').split(',');
+    cards += card('GPU', gpu[0] ? esc(gpu[0].trim()) : '—', 'ok',
+      gpu.length > 2 ? 'util ' + gpu[1].trim() + ' · ' + gpu[2].trim() : '');
+    var wk = (d.containers || {})['flop-miner-01-worker-1'] || '?';
+    cards += card('Worker uptime', esc(wk.replace('Up ', '')), 'ok',
+      'backend ' + ((d.containers || {})['flop-miner-01-backend-1'] || '?'));
+    document.getElementById('cards').innerHTML = cards;
+
+    var rb = document.getElementById('reg-body'); rb.innerHTML = '';
+    function row(k, v) { var tr = document.createElement('tr');
+      tr.innerHTML = '<td class="k">' + esc(k) + '</td><td>' + v + '</td>';
+      rb.appendChild(tr); }
+    row('Miner address', esc(idn.miner || '?'));
+    row('Worker / model', esc((idn.worker || '?') + ' — ' + (idn.model || '?')));
+    row('Model hash', esc(short(idn.model_hash, 26)));
+    if (cal.accepted_at) row('Calibration window',
+      'accepted block ' + esc(cal.accepted_at) + ' · expires ' +
+      esc(cal.expires_at) + ' · current ' + esc(cal.current_block));
+    (sp.legs || []).forEach(function (l) {
+      row('Sponsor ' + l.kind, esc(l.flop + ' FLOP · ' + l.state + ' · ' +
+        short(l.tx, 22))); });
+
+    var eb = document.getElementById('ev-body'); eb.innerHTML = '';
+    (d.events || []).slice().reverse().forEach(function (e) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + esc(e.ts) + '</td><td>' + esc(e.line) + '</td>';
+      eb.appendChild(tr); });
+    if (!(d.events || []).length)
+      eb.innerHTML = '<tr><td colspan="2">no notable events yet — waiting for sessions</td></tr>';
+  }).catch(function (e) {
+    statusEl.textContent = 'no data yet — mining.json not written';
+    dotEl.className = 'pulseDot down';
+  });
+})();
+</script>
+</body>
+</html>

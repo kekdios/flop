@@ -122,6 +122,7 @@ h2 {
     <a href="https://explorer.devnet.flop.network/mining" target="_blank" rel="noopener">explorer</a> ·
     <a href="/chat.html">agent chat window</a> ·
     <a href="/wallet.html">devnet wallet</a> ·
+    <a href="/mining.html">mining</a> ·
     <a href="/numes.html">numes probe</a> ·
     <a href="/kibble.html">kibble scorecard</a></p>
 
