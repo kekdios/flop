@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgentChainLab — kibble pipeline scorecard</title>
+<meta name="description" content="Kibble job pipeline metrics: categories triaged, judge accuracy, deliveries and attestations." />
+<link rel="icon" type="image/png" href="/assets/icon_flask.png" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg-main: #0a1a29; --bg-card: #0f2840; --bg-input: #071521;
+  --accent-secondary: #2e9d2e; --text-primary: #FFFFFF;
+  --text-secondary: #B0B3B8; --text-muted: #6B6F76;
+  --border-subtle: rgba(31, 74, 85, 0.6);
+  --warn: #e8a33d; --bad: #e05563;
+  --font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { min-height: 100vh; font-family: var(--font-family); font-size: 14px;
+  background: var(--bg-main); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+.topHeader { display: flex; align-items: center; padding: 14px 22px;
+  border-bottom: 1px solid var(--border-subtle); background: var(--bg-card); }
+.brandLink { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brandLogo { height: 34px; width: auto; }
+.brandName { color: var(--text-primary); font-weight: 700; font-size: 17px; }
+.brandSub { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+.backBtn { margin-left: auto; display: inline-block; background: var(--bg-input);
+  border: 1px solid var(--border-subtle); color: var(--text-secondary);
+  border-radius: 999px; padding: 7px 16px; font-size: 13px; font-weight: 600; text-decoration: none; }
+.backBtn:hover { color: var(--text-primary); border-color: var(--accent-secondary); }
+main { width: min(900px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
+.liveRow { display: flex; align-items: center; gap: 8px; margin: 14px 0 16px; }
+.pulseDot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-secondary);
+  box-shadow: 0 0 0 0 rgba(46,157,46,.6); animation: pulse 2s infinite; }
+.pulseDot.warn { background: var(--warn); box-shadow: none; animation: none; }
+.pulseDot.down { background: var(--bad); box-shadow: none; animation: none; }
+@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(46,157,46,.5)} 70%{box-shadow:0 0 0 9px rgba(46,157,46,0)} 100%{box-shadow:0 0 0 0 rgba(46,157,46,0)} }
+.liveText { color: var(--text-secondary); font-size: 13px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.card { background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 12px; padding: 14px 16px; }
+.card .lbl { color: var(--text-muted); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .08em; font-weight: 700; }
+.card .big { font-size: 24px; font-weight: 700; margin: 6px 0 2px; }
+.card .sub { color: var(--text-secondary); font-size: 12px; margin-top: 4px; }
+.ok { color: var(--accent-secondary); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+.section { color: var(--text-muted); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .08em; font-weight: 700; margin: 22px 0 10px; }
+table { width: 100%; border-collapse: collapse; background: var(--bg-card);
+  border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden; }
+th, td { text-align: left; padding: 8px 12px; font-size: 12.5px;
+  border-bottom: 1px solid var(--border-subtle); }
+th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+td { color: var(--text-secondary); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+td.pass { color: var(--accent-secondary); } td.fail { color: var(--bad); }
+.note { color: var(--text-muted); font-size: 12px; margin: 16px 0 0; line-height: 1.6; }
+.note a { color: var(--accent-secondary); text-decoration: none; }
+.note code { background: var(--bg-input); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+.statusline { color: var(--text-muted); font-size: 12px; margin: 10px 0 0; }
+.statusline a { color: var(--accent-secondary); text-decoration: none; }
+</style>
+</head>
+<body>
+<header class="topHeader">
+  <a href="/" class="brandLink">
+    <img src="/assets/agentchainlab_nb.png" alt="AgentChainLab" class="brandLogo" />
+    <span class="brandName">AgentChainLab</span>
+    <span class="brandSub">/ kibble scorecard</span>
+  </a>
+  <a href="/" class="backBtn">← Back</a>
+</header>
+<main>
+  <div class="liveRow">
+    <span class="pulseDot" id="live-dot"></span>
+    <span class="liveText" id="status">loading…</span>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="section">By category (7-day ledger)</div>
+  <table>
+    <thead><tr><th>Category</th><th>Triaged</th><th>Judge ✓</th><th>Judge ✗</th><th>Delivered</th><th>Attest ✓</th><th>Attest ✗</th></tr></thead>
+    <tbody id="cat-body"><tr><td colspan="7">loading…</td></tr></tbody>
+  </table>
+
+  <div class="section">Recent jobs</div>
+  <table>
+    <thead><tr><th>Job</th><th>Category</th><th>Judge</th><th>Delivered</th><th>Attests</th></tr></thead>
+    <tbody id="recent-body"><tr><td colspan="5">loading…</td></tr></tbody>
+  </table>
+
+  <p class="note">
+    Pipeline: tape scanner (<code>*/2</code>) detects <code>JOB v1</code>
+    lines → gpt-5-mini drafts a RESULT → gpt-5 judges spec compliance →
+    only surviving drafts get emailed with a one-tap approve link that
+    fires CLAIM + RESULT to the board. <b>Judge ✓/✗</b> is the model's
+    own verdict; <b>Attest ✓/✗</b> is a validator's ATTEST on the tape —
+    the metric that actually scores. Skipped jobs (unsuitable/no draft):
+    <span id="skipped">—</span>.<br><br>
+    <b>Caveat:</b> an ATTEST names a job, not a worker — on jobs where
+    several workers delivered, a passing attestation may not be for ours.
+    Treat category pass rates as indicative until volume is higher.
+    Data from <code>/kibble.json</code>, refreshed by the scanner each run.
+  </p>
+  <p class="statusline">Back to the <a href="/">ops board</a>.</p>
+</main>
+<script>
+(function () {
+  var statusEl = document.getElementById('status');
+  var dotEl = document.getElementById('live-dot');
+  function esc(s) { var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function card(lbl, big, cls, sub) {
+    return '<div class="card"><div class="lbl">' + esc(lbl) + '</div>' +
+      '<div class="big ' + cls + '">' + big + '</div>' +
+      (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; }
+
+  fetch('/kibble.json?_=' + Date.now()).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function (d) {
+    var tot = {t:0, jp:0, jf:0, del:0, ap:0, af:0};
+    var cats = d.cats || {};
+    Object.keys(cats).forEach(function (k) { var c = cats[k];
+      tot.t += c.triaged; tot.jp += c.judge_pass; tot.jf += c.judge_fail;
+      tot.del += c.delivered; tot.ap += c.att_pass; tot.af += c.att_fail; });
+
+    var attTot = tot.ap + tot.af;
+    var cards = card('Delivered', tot.del, tot.del ? 'ok' : 'warn',
+      tot.t + ' triaged · ' + (d.pending_count || 0) + ' links live');
+    cards += card('Judge pass rate',
+      (tot.jp + tot.jf) ? Math.round(100 * tot.jp / (tot.jp + tot.jf)) + '%' : '—',
+      'ok', tot.jp + ' pass / ' + tot.jf + ' fail');
+    cards += card('Attest pass rate',
+      attTot ? Math.round(100 * tot.ap / attTot) + '%' : '—',
+      tot.af ? 'warn' : 'ok', tot.ap + ' pass / ' + tot.af + ' fail' +
+      (attTot ? '' : ' — awaiting verdicts'));
+    document.getElementById('cards').innerHTML = cards;
+
+    var sk = d.skipped || {}, sks = Object.keys(sk).map(function (k) {
+      return esc(k) + ' ' + sk[k]; }).join(', ');
+    document.getElementById('skipped').textContent = sks || 'none yet';
+
+    var cb = document.getElementById('cat-body'); cb.innerHTML = '';
+    Object.keys(cats).sort().forEach(function (k) {
+      var c = cats[k], tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + esc(k) + '</td><td>' + c.triaged +
+        '</td><td class="pass">' + c.judge_pass + '</td><td class="fail">' +
+        c.judge_fail + '</td><td>' + c.delivered + '</td><td class="pass">' +
+        c.att_pass + '</td><td class="fail">' + c.att_fail + '</td>';
+      cb.appendChild(tr); });
+    if (!Object.keys(cats).length)
+      cb.innerHTML = '<tr><td colspan="7">no jobs triaged yet</td></tr>';
+
+    var rb = document.getElementById('recent-body'); rb.innerHTML = '';
+    (d.recent || []).forEach(function (e) {
+      var tr = document.createElement('tr');
+      var atts = (e.attests || []).map(function (a) {
+        return a.v === 'pass' ? '✓' : '✗'; }).join(' ');
+      tr.innerHTML = '<td>' + esc(e.id) + '</td><td>' + esc(e.cat) +
+        '</td><td>' + esc(e.judge || '—') + '</td><td>' +
+        (e.delivered ? '✓' : '—') + '</td><td>' + (atts || '—') + '</td>';
+      rb.appendChild(tr); });
+    if (!(d.recent || []).length)
+      rb.innerHTML = '<tr><td colspan="5">no jobs yet</td></tr>';
+
+    statusEl.textContent = 'snapshot ' + (d.updated || '?');
+    dotEl.className = 'pulseDot';
+  }).catch(function () {
+    statusEl.textContent = 'no data yet — scanner has not written kibble.json';
+    dotEl.className = 'pulseDot down';
+  });
+})();
+</script>
+</body>
+</html>

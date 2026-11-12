@@ -20,7 +20,11 @@ LOCK = "/var/lib/flop-ops/kibble-jobs.lock"
 LOG = "/var/log/kibble-jobs.log"
 ROOM = "https://technocore.chat/r/kibble"
 APPROVE_BASE = "https://agentchainlab.com/kibble-approve"
+STATS_TMP = "/var/www/agentchainlab/kibble.json.tmp"
+STATS_OUT = "/var/www/agentchainlab/kibble.json"
 JOB_RE = re.compile(r"^JOB v1\s*\|\s*(\S+)\s*\|\s*(.*)$")
+ATTEST_RE = re.compile(
+    r"^ATTEST v1\s*\|\s*(\S+)\s*\|\s*(useful|not-useful)", re.I)
 UA = {"User-Agent": "flop-ops/1.0"}
 MAX_PENDING = 12
 JOB_TTL = 4 * 3600
@@ -183,6 +187,8 @@ def main():
         pass
     last = state.get("last_seq", 0)
     pending = state.get("pending") or {}
+    ledger = state.get("ledger") or {}
+    skipped = state.get("skipped") or {}
 
     try:
         d = get(ROOM + "?format=json&limit=80")
@@ -199,9 +205,22 @@ def main():
         seq = m.get("seq", 0)
         if seq > last:
             last = seq
-        mt = JOB_RE.match(m.get("text", "").strip())
+        txt = m.get("text", "").strip()
+        mt = JOB_RE.match(txt)
         if mt and seq > state.get("last_seq", 0):
             new_jobs.append((mt.group(1), mt.group(2)))
+        at = ATTEST_RE.match(txt)
+        if at:
+            att_jid, att_v = at.group(1), at.group(2).lower()
+            ent = ledger.get(att_jid)
+            if ent is not None:
+                evs = ent.setdefault("attests", [])
+                evs.append({"v": "pass" if att_v == "useful" else "fail",
+                            "by": m.get("from", "")[-14:],
+                            "ts": m.get("ts", "")[:19]})
+                if len(evs) > 10:
+                    del evs[:-10]
+                log("attest on %s: %s" % (att_jid, att_v))
     state["last_seq"] = last
 
     if first_run:
@@ -228,8 +247,11 @@ def main():
         draft = llm_draft(env, body)
         if draft is None:
             log("job %s skipped (unsuitable or llm unavailable)" % jid)
+            skipped[cat] = skipped.get(cat, 0) + 1
             continue
         verdict, notes = llm_judge(env, body, draft)
+        ledger[jid] = {"ts": now, "cat": cat, "judge": verdict,
+                       "title": body[:160]}
         if verdict == "FAIL":
             log("job %s draft rejected by judge: %s" % (jid, notes))
             continue
@@ -249,10 +271,76 @@ def main():
         log("job %s triaged+emailed (cat=%s judge=%s)" % (jid, cat, verdict))
         triaged += 1
         state["pending"] = pending
+        state["ledger"] = ledger
         save(state)  # persist each job before the next slow LLM call
 
+    # Propagate delivery status (approve server flips pending.sent) into the
+    # ledger so the stats page can report it.
+    for jid, ent in ledger.items():
+        p = pending.get(jid)
+        if p and p.get("sent"):
+            ent["delivered"] = True
+
+    # Backfill jobs triaged before the ledger existed, then prune entries
+    # older than 7 days.
+    for jid, p in pending.items():
+        if jid not in ledger:
+            ledger[jid] = {"ts": p.get("ts", now), "cat": p.get("cat", "-"),
+                           "judge": p.get("judge"),
+                           "title": p.get("title", ""),
+                           "delivered": bool(p.get("sent"))}
+    for jid in [j for j, e in ledger.items()
+                if e.get("ts", 0) < now - 7 * 86400]:
+        del ledger[jid]
+
     state["pending"] = pending
+    state["ledger"] = ledger
+    state["skipped"] = skipped
     save(state)
+    write_stats(ledger, skipped, pending)
+
+
+def write_stats(ledger, skipped, pending):
+    """Summarise the ledger into kibble.json for /kibble.html.
+    Caveat recorded in the data: an ATTEST names a job, not a worker — on
+    jobs with several deliveries we can't prove the verdict was for ours."""
+    now = time.time()
+    cats = {}
+    recent = []
+    for jid, e in sorted(ledger.items(),
+                         key=lambda kv: kv[1].get("ts", 0), reverse=True):
+        cat = e.get("cat") or "-"
+        c = cats.setdefault(cat, {"triaged": 0, "judge_pass": 0,
+                                  "judge_fail": 0, "judge_unsure": 0,
+                                  "delivered": 0, "att_pass": 0,
+                                  "att_fail": 0})
+        c["triaged"] += 1
+        j = e.get("judge")
+        if j == "PASS":
+            c["judge_pass"] += 1
+        elif j == "FAIL":
+            c["judge_fail"] += 1
+        elif j:
+            c["judge_unsure"] += 1
+        if e.get("delivered"):
+            c["delivered"] += 1
+        for a in e.get("attests") or []:
+            c["att_" + a["v"]] += 1
+        if len(recent) < 20:
+            att = e.get("attests") or []
+            recent.append({"id": jid, "cat": cat, "judge": e.get("judge"),
+                           "delivered": bool(e.get("delivered")),
+                           "attests": att[-3:], "title": e.get("title")})
+    out = {"updated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
+           "cats": cats, "skipped": skipped,
+           "pending_count": sum(1 for p in pending.values()
+                                if not p.get("sent")),
+           "recent": recent}
+    try:
+        json.dump(out, open(STATS_TMP, "w"))
+        os.replace(STATS_TMP, STATS_OUT)
+    except OSError:
+        pass
 
 
 if __name__ == "__main__":
