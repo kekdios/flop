@@ -25,7 +25,10 @@ if REMOTE=$($SSH 'bash -s' <<'EOS' 2>/dev/null
 gpu=$(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader 2>/dev/null | head -1)
 dock=$(docker ps --format '{{.Names}}:{{.Status}}' 2>/dev/null | tr '\n' ';')
 tok=$(grep -m1 '^SESSION_AUTH_TOKEN=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2)
-info=$(curl -s --max-time 5 ${tok:+-H "Authorization: Bearer $tok"} http://127.0.0.1:8645/session/info 2>/dev/null || true)
+info=""; for i in 1 2 3; do
+  info=$(curl -sf --max-time 8 ${tok:+-H "Authorization: Bearer $tok"} http://127.0.0.1:8645/session/info 2>/dev/null) && break
+  info=""; sleep 2
+done
 disk=$(df -h / | awk 'NR==2{print $4" free"}')
 model=$(basename "$(grep -m1 '^MODEL_NAME=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2-)" 2>/dev/null)
 wimg=$(grep -m1 '^FLOP_WORKER_IMAGE=' /opt/flop-miner/miner.env 2>/dev/null | cut -d= -f2-)
@@ -45,7 +48,16 @@ EOS
     cap=$(echo "$info" | grep -oE '"capGflopsPerSec"[ :]*"?[0-9]+' | grep -oE '[0-9]+$' | head -1)
     cal="active (cap ${cap:-?} GFLOP/s)"; cal_state="ok"
   elif echo "$info" | grep -q calibration; then cal="in progress"; cal_state="warn";
-  else cal="not calibrated"; fi
+  elif [ -n "$info" ]; then cal="not calibrated"; cal_state="";
+  else cal="__KEEP__"; fi
+  # Endpoint fetch failed → keep last known calibration instead of flapping.
+  if [ "$cal" = "__KEEP__" ]; then
+    cal=$(cut -d'|' -f1 /var/lib/flop-ops/last-cal 2>/dev/null)
+    cal_state=$(cut -d'|' -f2 /var/lib/flop-ops/last-cal 2>/dev/null)
+    [ -z "$cal" ] && { cal="unreachable"; cal_state="warn"; }
+  else
+    mkdir -p /var/lib/flop-ops; echo "$cal|$cal_state" > /var/lib/flop-ops/last-cal
+  fi
   sess=$(echo "$info" | grep -oE '"sessions"[ :]*[0-9]+' | grep -oE '[0-9]+' | head -1); sess=${sess:-0}
   note=$(echo "$REMOTE" | sed -n 's/^DISK=//p')
   model=$(echo "$REMOTE" | sed -n 's/^MODEL=//p'); [ -n "$model" ] && model_state="ok" || model="—"
