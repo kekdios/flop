@@ -17,6 +17,9 @@ OUT_TMP = "/var/www/agentchainlab/numes.json.tmp"
 OUT = "/var/www/agentchainlab/numes.json"
 API = "https://api.numes.ai/api/v1"
 OUR_MODEL = "openai/gpt-oss-20b"
+PROFILES = ["gpt-oss-a4000", "or-tail"]
+OUR_MODELS = {"openai/gpt-oss-20b", "thedrummer/unslopnemo-12b",
+              "thedrummer/cydonia-24b-v4.1", "thedrummer/skyfall-36b-v2"}
 
 
 def env():
@@ -62,6 +65,9 @@ export PATH=$HOME/.local/bin:$PATH
 echo "STATUS<<"
 numes provider status --profile gpt-oss-a4000 2>/dev/null
 echo ">>"
+echo "STATUS2<<"
+numes provider status --profile or-tail 2>/dev/null
+echo ">>"
 echo "GPU=$(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader 2>/dev/null | head -1)"
 echo "VLLM=$(curl -s --max-time 5 http://127.0.0.1:8000/v1/models | python3 -c 'import json,sys;d=json.load(sys.stdin);print(len(d.get("data",[])))' 2>/dev/null)"
 echo "DAEMON=$(pgrep -fc 'numes provider daemon' 2>/dev/null)"
@@ -93,6 +99,27 @@ echo "RECONNECTS=$(grep -c 'reconnect' /root/vllm.log 2>/dev/null)"
                     }
                 except (ValueError, AttributeError):
                     out["provider_state"] = "status_parse_error"
+                if "STATUS2<<" in txt:
+                    blob2 = txt.split("STATUS2<<", 1)[1].split(">>", 1)[0]
+                    try:
+                        st2 = json.loads(blob2)
+                        rt2 = st2.get("runtime") or {}
+                        lc = st2.get("lifecycle") or {}
+                        out.setdefault("profiles", {})["or-tail"] = {
+                            "session": rt2.get("sessionState"),
+                            "source_health": rt2.get("sourceHealth"),
+                            "endpoint": ((st2.get("endpoint") or {})
+                                        .get("state")
+                                       or (lc.get("endpoint") or {})
+                                        .get("status")),
+                            "listings": [{"model": l.get("model"),
+                                          "status": l.get("status")}
+                                         for l in (lc.get("listings")
+                                                   or [])],
+                        }
+                    except (ValueError, AttributeError):
+                        out.setdefault("profiles", {})["or-tail"] = {
+                            "error": "status_parse_error"}
                 for line in txt.splitlines():
                     if line.startswith("GPU="):
                         parts = [p.strip() for p in line[4:].split(",")]
@@ -121,8 +148,9 @@ echo "RECONNECTS=$(grep -c 'reconnect' /root/vllm.log 2>/dev/null)"
                     "ctx": m.get("context_length"),
                     "usd_prompt": usd.get("prompt"),
                     "usd_completion": usd.get("completion")})
-                if m.get("id") == OUR_MODEL:
+                if m.get("id") in OUR_MODELS:
                     cat["our_model_listed"] = True
+                    cat.setdefault("our_listed", []).append(m.get("id"))
             out["catalogue_btc"] = cat
         except Exception as e:
             out["catalogue_error"] = str(e)[:200]

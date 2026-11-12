@@ -115,13 +115,15 @@ td.ours { color: var(--accent-secondary); font-weight: 700; }
 
   <p class="note">
     The Numes catalogue is <b>currency-scoped</b>: customers only see models
-    priced in their key's currency. BTC keys currently see only the models
-    above — all frontier-scale. Our <code>openai/gpt-oss-20b</code> offer,
-    once approved, will be the only sub-frontier model purchasable in BTC.
-    Pricing is USD-indexed BTC (we enter dollar prices, earnings settle in
-    sats) at parity with Numes' hosted USD offer: $0.03/1M prompt,
-    $0.14/1M completion. Probe box: vast.ai RTX A4000, ~$2/day of
-    pre-paid credit. Data refreshed every 10 min by the droplet collector;
+    priced in their key's currency. Two experiments run under the one
+    provider: <b>gpt-oss-a4000</b> — our vast.ai RTX A4000 serving
+    <code>openai/gpt-oss-20b</code> at parity with Numes' hosted USD offer
+    ($0.03/$0.14 per 1M) — measures whether sub-frontier models get BTC
+    demand; and <b>or-tail</b> — an OpenRouter-hosted resale profile
+    listing three TheDrummer roleplay fine-tunes absent from the Numes
+    catalogue (scarce-tail play, ~30% over upstream, $5-capped upstream
+    key). Both priced USD-indexed BTC: dollar prices in, sats out.
+    Data refreshed every 10 min by the droplet collector;
     this page polls <code>/numes.json</code> each minute.
   </p>
   <p class="statusline">
@@ -207,21 +209,39 @@ td.ours { color: var(--accent-secondary); font-weight: 700; }
         ' · ' + esc(d.gpu.temp));
     }
 
+    var prof = (d.profiles || {})['or-tail'];
+    if (prof) {
+      var lsts2 = (prof.listings || []).map(function (l) {
+        return esc((l.model || '').split('/').pop()) + ': <b>' +
+               esc(l.status || '—') + '</b>';
+      });
+      lsts2.push('endpoint: <b>' + esc(prof.endpoint || '—') + '</b>');
+      lsts2.push('session: ' + esc(prof.session || '—'));
+      cards += card('Reseller (or-tail)',
+        prof.endpoint === 'active' || prof.endpoint === 'approved'
+          ? 'live' : 'in review',
+        /approv|live|connect/i.test(prof.endpoint || '')
+          ? 'ok' : 'warn', lsts2.join('<br/>'));
+    }
+
     var cat = d.catalogue_btc;
     if (cat) {
+      var n = (cat.our_listed || []).length;
       cards += card('BTC catalogue', cat.count + ' models', 'btc',
-        cat.our_model_listed
-          ? 'our model is <b class="ok">listed</b> — reachable by BTC keys'
-          : 'our model not yet visible to BTC keys (pending approval)');
+        n ? n + ' of ours <b class="ok">listed</b> — reachable by BTC keys'
+          : 'none of ours visible to BTC keys yet (pending approval)');
     }
 
     cardsEl.innerHTML = cards;
 
     catBody.innerHTML = '';
+    var oursSet = {'openai/gpt-oss-20b': 1, 'thedrummer/unslopnemo-12b': 1,
+                   'thedrummer/cydonia-24b-v4.1': 1,
+                   'thedrummer/skyfall-36b-v2': 1};
     if (cat && cat.models && cat.models.length) {
       cat.models.forEach(function (m) {
         var tr = document.createElement('tr');
-        var ours = m.id === d.model;
+        var ours = !!oursSet[m.id];
         tr.innerHTML = '<td' + (ours ? ' class="ours"' : '') + '>' + esc(m.id) +
           (ours ? ' ← ours' : '') + '</td><td>' +
           (m.ctx ? (m.ctx / 1024).toFixed(0) + 'k' : '—') + '</td><td>' +

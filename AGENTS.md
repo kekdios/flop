@@ -78,7 +78,9 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   CLI: `setup openrouter` needs uniform --prompt-price; per-model prices
   get edited in the TUI (`provider tui`, needs ssh -tt) + `p` publish.
   Endpoint pending_approval at setup; transport flaps until approved.
-  onstart.sh runs both daemons.
+  onstart.sh runs both daemons. `numes-status.py` collects both
+  profiles → /numes.html shows the reseller card + marks all our
+  models in the BTC catalogue table.
 - Numery keys in `~/.flop/numes.env`: NUMES_API_KEY (USD inference,
   catalogue reads), NUMES_MGMT_KEY (management), NUMES_BTC_KEY (BTC
   inference, customer-side loop testing later; ALSO on droplet in

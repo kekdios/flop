@@ -64,7 +64,8 @@
       "Exec(~/.flop/venv/bin/vastai attach)",
       "Exec(~/.flop/venv/bin/vastai)",
       "Exec(set)",
-      "Exec(time curl)"
+      "Exec(time curl)",
+      "Exec(~/.flop/numes-scan.py)"
     ]
   }
 }
