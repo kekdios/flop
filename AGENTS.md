@@ -93,7 +93,9 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   stored in `/root/.numes-or-env` (mode 600) — daemon needs it via env.
   CLI: `setup openrouter` needs uniform --prompt-price; per-model prices
   get edited in the TUI (`provider tui`, needs ssh -tt) + `p` publish.
-  Endpoint pending_approval at setup; transport flaps until approved.
+  Endpoint **approved + active ~17:40 UTC same-day**; transport flapped
+  while pending_approval (normal), session settled to connected on
+  approval. Provider board now shows 4 models / 2 endpoints.
   onstart.sh runs both daemons. `numes-status.py` collects both
   profiles → /numes.html shows the reseller card + marks all our
   models in the BTC catalogue table.
