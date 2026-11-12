@@ -18,8 +18,8 @@ cal="not started"; cal_state=""
 sess="—"; sess_state=""
 ep="${ENDPOINT:-pending}"; ep_state=""
 note=""
-# Kibble score comes from the 15-min watcher state file (no slow API call here).
-kib=$(python3 -c "import json;print(json.load(open('/var/lib/flop-ops/kibble-watch.json')).get('score','—'))" 2>/dev/null || echo "—"); kib_state=""
+# Kibble score comes from the score-collector snapshot (no slow API call here).
+kib=$(python3 -c "import json;print(json.load(open('/var/lib/flop-ops/kibble-score.json')).get('data',{}).get('score','—'))" 2>/dev/null || echo "—"); kib_state=""
 
 if REMOTE=$($SSH 'bash -s' <<'EOS' 2>/dev/null
 gpu=$(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader 2>/dev/null | head -1)
@@ -40,7 +40,9 @@ EOS
   miner=$(echo "$REMOTE" | sed -n 's/^DOCKER=//p')
   if [ -n "$miner" ]; then miner_state="ok"; else miner="docker down"; miner_state="bad"; fi
   info=$(echo "$REMOTE" | sed -n 's/^SESSION_INFO<<//;s/>>$//p')
-  if echo "$info" | grep -q '"is_ready"[ :]*true'; then cal="ready"; cal_state="ok";
+  if echo "$info" | grep -q '"ready"[ :]*true'; then
+    cap=$(echo "$info" | grep -oE '"capGflopsPerSec"[ :]*"?[0-9]+' | grep -oE '[0-9]+$' | head -1)
+    cal="active (cap ${cap:-?} GFLOP/s)"; cal_state="ok"
   elif echo "$info" | grep -q calibration; then cal="in progress"; cal_state="warn";
   else cal="not calibrated"; fi
   sess=$(echo "$info" | grep -oE '"sessions"[ :]*[0-9]+' | grep -oE '[0-9]+' | head -1); sess=${sess:-0}
