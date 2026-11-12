@@ -63,7 +63,8 @@
       "Exec(~/.flop/venv/bin/vastai show)",
       "Exec(~/.flop/venv/bin/vastai attach)",
       "Exec(~/.flop/venv/bin/vastai)",
-      "Exec(set)"
+      "Exec(set)",
+      "Exec(time curl)"
     ]
   }
 }
