@@ -1,0 +1,14 @@
+[Unit]
+Description=flop-ops kibble job pipeline (tape poller, drafter, judge, auto-approve)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/lib/flop-ops/kibble-jobs.py
+Restart=always
+RestartSec=5
+User=root
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -242,46 +242,24 @@ def llm_judge(env, job_text, draft):
     return "UNSURE", "judge error"
 
 
-def main():
-    # Serialise runs: LLM drafting can take minutes and the cron fires every
-    # 2. Overlapping runs used to clobber each other's pending entries —
-    # emailed links whose jobs vanished from state (the "Unknown or
-    # already-used" bug). Hold an exclusive lock for the whole run.
-    os.makedirs(os.path.dirname(STATE), exist_ok=True)
-    lock_fd = open(LOCK, "w")
+def feed_msgs(state, ledger):
+    """Incremental tape feed: fetch messages with seq > last_seq.
+    Returns [(jid, body, sender), ...] for JOB lines; records ATTEST
+    verdicts against ledger entries as a side effect."""
     try:
-        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
-        return
-    env = load_env(ENV_PATH)
-    state = {}
-    try:
-        state = json.load(open(STATE))
-    except OSError:
-        pass
-    last = state.get("last_seq", 0)
-    pending = state.get("pending") or {}
-    ledger = state.get("ledger") or {}
-    skipped = state.get("skipped") or {}
-
-    try:
-        d = get(ROOM + "?format=json&limit=80")
+        d = get(ROOM + "?format=json&since=%d&limit=200"
+                % state.get("last_seq", 0))
     except Exception as e:
         log("tape fetch failed: %r" % e)
-        return
-    msgs = d.get("messages", [])
-    if not msgs:
-        return
-
-    first_run = "last_seq" not in state
+        return []
     new_jobs = []
-    for m in msgs:
+    for m in d.get("messages", []):
         seq = m.get("seq", 0)
-        if seq > last:
-            last = seq
+        if seq > state.get("last_seq", 0):
+            state["last_seq"] = seq
         txt = m.get("text", "").strip()
         mt = JOB_RE.match(txt)
-        if mt and seq > state.get("last_seq", 0):
+        if mt:
             new_jobs.append((mt.group(1), mt.group(2),
                              m.get("from", "")))
         at = ATTEST_RE.match(txt)
@@ -296,12 +274,21 @@ def main():
                 if len(evs) > 10:
                     del evs[:-10]
                 log("attest on %s: %s" % (att_jid, att_v))
-    state["last_seq"] = last
+    return new_jobs
 
-    if first_run:
-        # Seed silently — don't alert on the pre-existing backlog.
+
+def one_pass(state):
+    env = load_env(ENV_PATH)
+    pending = state.get("pending") or {}
+    ledger = state.get("ledger") or {}
+    skipped = state.get("skipped") or {}
+
+    new_jobs = feed_msgs(state, ledger)
+    if not state.get("seeded"):
+        # First contact: seed seq silently — don't alert on backlog.
+        state["seeded"] = True
         log("first run: seeded last_seq=%s, saw %d job lines"
-            % (last, len(new_jobs)))
+            % (state.get("last_seq", 0), len(new_jobs)))
         state["pending"] = pending
         save(state)
         return
@@ -325,8 +312,19 @@ def main():
     auto_fired = 0
 
     triaged = 0
+    seen = {j for j, _, _ in new_jobs}
+    last_feed = time.time()
     for jid, body, sender in new_jobs:
-        if jid in pending:
+        # Long LLM batches must not let the tape scroll past unseen:
+        # re-poll the feed every ~15s so last_seq keeps advancing.
+        if time.time() - last_feed > 15:
+            for j2, b2, s2 in feed_msgs(state, ledger):
+                if j2 not in seen and j2 not in pending and j2 not in ledger:
+                    new_jobs.append((j2, b2, s2))
+                    seen.add(j2)
+            last_feed = time.time()
+            save(state)
+        if jid in pending or jid in ledger:
             continue
         live = sum(1 for p in pending.values() if not p.get("sent"))
         if live >= MAX_PENDING or triaged >= int(env.get("TRIAGE_PER_RUN", 5)):
@@ -358,16 +356,19 @@ def main():
                 and auto_hour < int(env.get("AUTO_PER_HOUR", AUTO_PER_HOUR)))
         tag = "vetted" if verdict == "PASS" else "borderline: " + notes
         tok = secrets.token_hex(12)
-        pending[jid] = {"ts": now, "cat": cat,
-                        "title": body[:200], "draft": draft,
-                        "draft_model": dmodel,
-                        "judge": verdict, "judge_notes": notes,
-                        "tok": tok, "sent": auto}
+        # When notifications are off, approve links are unreachable —
+        # pending them just saturates MAX_PENDING and stalls triage.
+        if auto or not env.get("NOTIFY_OFF"):
+            pending[jid] = {"ts": now, "cat": cat,
+                            "title": body[:200], "draft": draft,
+                            "draft_model": dmodel,
+                            "judge": verdict, "judge_notes": notes,
+                            "tok": tok, "sent": auto}
         link = "%s?job=%s&tok=%s" % (APPROVE_BASE, jid, tok)
         if auto:
             ledger[jid]["auto"] = True
             ledger[jid]["delivered"] = True
-            fire_acts(env, jid, draft, delay=auto_fired * 20)
+            fire_acts(env, jid, draft, delay=auto_fired * 3)
             auto_fired += 1
             auto_hour += 1
             send(env, "AUTO-FIRED %s — %s" % (jid, cat),
@@ -413,6 +414,35 @@ def main():
     state["skipped"] = skipped
     save(state)
     write_stats(ledger, skipped, pending)
+
+
+POLL_SEC = 6
+
+
+def main():
+    # Daemon mode: exclusive lock for the process lifetime so stray
+    # cron/manual invocations can't clobber state. KIBBLE_ONCE=1 runs a
+    # single pass (debugging/manual use).
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    lock_fd = open(LOCK, "w")
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return
+    state = {}
+    try:
+        state = json.load(open(STATE))
+    except OSError:
+        pass
+    if os.environ.get("KIBBLE_ONCE"):
+        one_pass(state)
+        return
+    while True:
+        try:
+            one_pass(state)
+        except Exception as e:
+            log("pass error: %r" % e)
+        time.sleep(POLL_SEC)
 
 
 def write_stats(ledger, skipped, pending):

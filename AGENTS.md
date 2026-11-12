@@ -117,10 +117,15 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   DID or gateway) independent of balance — retry after reset.
   Rule: poster/worker/validator must be 3 different parties — never
   self-claim own JOBs.
-- **Kibble job pipeline (2026-11-12)**: `kibble-jobs.py` (droplet cron
-  `*/2`, flock-guarded) scans the room tape for `JOB v1` lines —
-  detection works even while kibble.world reads hang (writes still land
-  via `/act` fire-and-forget). Flow per job: `openai/gpt-5-mini`
+- **Kibble job pipeline (2026-11-12)**: `kibble-jobs.py` runs as a
+  **systemd daemon** (`flop-kibble-jobs.service`, flock-guarded, ~6s
+  poll) — replaced the old `*/2` cron, which is commented out in
+  `/etc/crontab`. Feed is incremental: `?since=<last_seq>&limit=200`
+  paged every pass, plus a mid-triage refresh every ~15s during LLM
+  batches so last_seq keeps advancing and no CLAIM/RESULT/ATTEST lines
+  are missed (the old 80-msg latest-window missed attests entirely).
+  `KIBBLE_ONCE=1` runs a single pass for manual/debug use.
+  Flow per job: `openai/gpt-5-mini`
   (ASK_MODEL) drafts a RESULT for in-wheelhouse jobs →
   `anthropic/claude-sonnet-4.6` (JUDGE_MODEL) judges it with a
   Success:-line checklist rubric → PASS/UNSURE jobs email a single-use
@@ -131,16 +136,26 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   (DRAFT_FALLBACK_URL → `openai/gpt-oss-20b`, :40524) — only fires on
   primary failure to keep Numes demand measurement clean.
   - **Auto-approve**: `KIBBLE_AUTO_UNTIL` (epoch) enables bounded
-    judge-PASS auto-delivery — max 3/run, 10/hour, 20s stagger,
-    informational email per fire; UNSURE stays manual. First experiment
-    ran 03:29–04:29 UTC 2026-11-12 (4 auto-fires).
+    judge-PASS auto-delivery — env-tunable `AUTO_PER_RUN`/`AUTO_PER_HOUR`
+    (currently 15/150), 3s stagger, `NOTIFY_OFF=1` suppresses Resend
+    sends while logging them; `AUTO_DROP_UNSURE=1` logs UNSURE drafts
+    without occupying pending slots (only during auto mode).
+  - **Wire format** (post-2026-11-12 fix): CLAIM = `{"kind":"claim",
+    "job_id":jid,"seed_hex":...}`; RESULT = `{"kind":"result","job_id":
+    jid,"body":draft,"seed_hex":...}` — free-text `text` payloads get
+    `bad job id ''`/`not a kibble-v1 line`. Race reality: winning
+    workers claim in 0.3–2s and deliver in 1–6s; our daemon lands
+    CLAIM in ~30-60s. Attests observed per-delivery, landing 2–30s
+    after DELIVER.
   - State: `/var/lib/flop-ops/kibble-jobs.json` (4h pending expiry,
-    7-day ledger with draft+judge_notes for audit). Scorecard:
+    7-day ledger with draft+judge_notes+attests for audit). Scorecard:
     `https://agentchainlab.com/kibble.html` fed by the same script's
     stats → `/var/www/agentchainlab/kibble-stats.json`. Logs:
     `/var/log/kibble-jobs.log`, `/var/log/kibble-approve.log`. First run
-    seeds seq silently. Gotcha: MAX_PENDING counts UNSENT entries only —
-    counting sent ones caused a silent stall.
+    seeds seq silently (`seeded` flag). Gotchas: MAX_PENDING counts
+    UNSENT entries only — counting sent ones caused a silent stall;
+    when `NOTIFY_OFF` is set, non-auto jobs are ledger-only (never
+    pended — unreachable links would saturate the cap).
 - **Public faucet**: `POST https://faucet.flop.network/fund` with
   {"address":"<SS58>"} → 25 FLOP anonymous grant, 24h cooldown
   per address. Verified-human tier (500-2000 FLOP) needs an EVM wallet
