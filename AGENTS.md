@@ -142,6 +142,12 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   (without it validation fails `invalid_tool_call`); numes admin review
   is manual — days possible. Destroy instance if probe is uneconomical:
   `~/.flop/venv/bin/vastai destroy instance 60277620`.
+- **Display bug (2026-11-13, reported)**: Numes "Prices BTC" view renders
+  SATOSHIS with the ₿ glyph — our $0.03/$0.14 USD-indexed listing shows
+  as "₿42 / ₿197". ₿ means whole BTC everywhere else; reads ~8 orders
+  of magnitude too high to BTC customers. Our pricing is correct (USD
+  anchor, sats float); the bug is their unit label. If a customer or
+  agent reads the board in BTC view, this is why it looks insane.
 
 ## Ops-site alerting pipeline
 - `site/bin/collect.sh` → deployed `/usr/local/lib/flop-ops/collect.sh`, root cron
