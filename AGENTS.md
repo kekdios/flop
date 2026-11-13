@@ -281,6 +281,17 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   wallet. Faucet cron claims for it nightly (MULTICHAIN_ADDR in
   flop-ops.env); wallet page tracks it as "multichain". Distinct from
   the Talisman wallet 5H1E2XQ3 (different key, different account).
+- **Cross-chain swap mechanics (verified 2026-11-13)**: Talisman CAN
+  sign FLOP extrinsics directly (no custom-network needed — extension
+  signs by genesis hash). Explorer cross-chain page → New swap →
+  maker = funded FLOP acct (5H1E2XQ3), counter = agentchainlab.near.
+  Pallet: `HasStation.create_cross_chain_htlc`. RULE:
+  FLOP-leg timelock must cover the NEAR leg's window —
+  `TimelockSymmetryViolation` if too short; 2h fails, **24h works**.
+  Failed dispatch still burns nonce+fee. HTLC auto-refunds at timeout
+  if the NEAR leg never completes (NEAR leg = real mainnet NEAR, so
+  refund is the free dry-run outcome). First offer: 10 FLOP locked
+  under hash-lock 97655037… (tx 0x2cf55ce5).
 - **Live FLOP (post-devnet)**: same model — control = key possession.
   Miner earnings accrue to the miner address (its key lives on the
   GPU host; keep `signer`+`miner-key.json` safe). A personal wallet =
