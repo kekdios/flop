@@ -176,14 +176,17 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 - **Kibble→FLOP bridge**: `POST kibble.world/api/flop-devnet` with
   {action:status|address|faucet|chat|balance|transfer, seed_hex}. Our DID's
   assigned devnet address ROTATES FREQUENTLY without moving balances —
-  3 addresses in 2 days (5DUAJj3Y → 5GpjXEBu → 5EkGcLZf as of
-  2026-11-12; re-check via action:"address"). Grants claimed to a
+  4 addresses in 3 days (5DUAJj3Y → 5GpjXEBu → 5EkGcLZf → 5DcAhExf
+  as of 2026-11-13; re-check via action:"address"). Grants claimed to a
   rotated-out address STRAND there (custodial keys are bridge-side;
-  transfer caps at 0.001). Bridge faucet action disabled.
+  transfer caps at 0.001; ~75 FLOP stranded across the 3 retired
+  addresses so far). Bridge faucet action disabled.
   chat → devnet gateway models = the demand path to miners
-  (serves qwen/qwen2.5-0.5b-instruct; per-DID ~5s rate limit;
-  401 = unfunded address; "daily cap" = per-DID chat quota independent
-  of balance — retry after reset). **flop-chat.py** (droplet cron
+  (served qwen2.5-0.5b-instruct, then switched to
+  nousresearch/arete-27b ~2026-11-13 — model list rotates; per-DID ~5s
+  rate limit; 401 persists EVEN WHEN FUNDED as of 11-13 — funding was
+  not the (only) gate, treat 401 as gateway-side auth failure;
+  "daily cap" = per-DID chat quota independent of balance). **flop-chat.py** (droplet cron
   `23 */4`) now SELF-FUNDS: resolves the current address → if free<5
   FLOP claims the anonymous 25 FLOP grant onto it → waits → chats.
   This collapses the rotation window to seconds (previously the 22:15

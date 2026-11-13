@@ -26,7 +26,7 @@ B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
 ENV_FILE = "/etc/flop-ops.env"
 BRIDGE_API = "https://kibble.world/api/flop-devnet"
-BRIDGE_FALLBACK = "5EkGcLZfE3RfcZhfYKYx9DoUecJnTSjtc7Lpy4puJ93joBa3"
+BRIDGE_FALLBACK = "5DcAhExfjzGYh6oYCdHqp3a49fgD9GyXwCcyLC5QjqTrBxfE"
 
 
 def env_key(name):
@@ -67,6 +67,7 @@ ACCOUNTS = [
     ("multichain", "5EZK4Z6jrNBw41X52P1X11aYzLjEmAfE3bAcjBheJ18KMiRw"),
     ("stale", "5DUAJj3YrFmYj5bbzzJULgrfKeLrVHpuWE1UAEsHPwSYivu9"),
     ("stale-2", "5GpjXEBuS1L8Svrrh9EMDTruwvhNPAquAjjJ4XLAbbe3fR6w"),
+    ("stale-3", "5EkGcLZfE3RfcZhfYKYx9DoUecJnTSjtc7Lpy4puJ93joBa3"),
 ]
 
 
