@@ -147,7 +147,14 @@ td.k { color: var(--text-muted); white-space: nowrap; width: 180px; }
       (ch.poui_rank != null ? ' · rank ' + ch.poui_rank : '') +
       (net.sessions_htlc != null
         ? ' · net: ' + fmt(net.sessions_htlc, 0) + ' session keys, ' +
-          (net.proofs_24h || 0) + ' proofs/24h'
+          (net.proofs_24h || 0) + ' proofs/24h' +
+          (net.registered_miners != null
+            ? ' · ' + fmt(net.registered_miners, 0) + ' miners, ' +
+              fmt(net.active_agents || 0, 0) + ' agents'
+            : '') +
+          ((net.index_lag || 0) > 100
+            ? ' · INDEXER ' + fmt(net.index_lag, 0) + ' blocks behind'
+            : '')
         : ''));
     cards += card('Calibration',
       cal.state ? esc(cal.state) : '—', calCls,

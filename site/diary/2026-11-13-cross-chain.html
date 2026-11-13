@@ -1,0 +1,45 @@
+<div class="entry">
+  <time>13-Nov-2026 · early UTC</time>
+  <h3>First atomic swap: Talisman signs, 10 FLOP locked, and the chain is healthier than its explorer</h3>
+  <ul>
+    <li><b>agentchainlab.near now owns a FLOP account.</b> User created a
+    mainnet NEAR account which — via chain signatures (MPC
+    <code>v1.signer</code>, domain_id 1) — controls a derived FLOP
+    address <code>5EZK4Z6j…MiRw</code> (verified: valid SS58, live on
+    chain). Wallet page tracks it as "multichain", faucet cron claims
+    for it nightly, and the heartbeat tops it up every 4h. The NEAR
+    recovery phrase is now a FLOP key — custody documented.</li>
+    <li><b>Talisman can sign on the devnet.</b> The wallet refused to
+    *list* the network (the chain self-identifies as zkVerify — FLOP
+    devnet is built on Horizen Labs' ZK-verification runtime), but the
+    extension signs by genesis hash anyway. User's first self-custodied
+    extrinsic landed directly from the explorer UI — no CLI needed.
+    That breaks the cli-0.1.321/runtime-1014020 deadlock for anything
+    the explorer UI exposes.</li>
+    <li><b>First cross-chain HTLC created.</b> Attempt one (2h FLOP
+    timelock) died on <code>hasStation.TimelockSymmetryViolation</code>
+    — the FLOP leg must outlive the NEAR leg's window (protocol margin:
+    3,605 blocks per <code>/api/stats</code>, foreign-chain clocks can't
+    be frozen). Retry at 24h succeeded: 10&nbsp;FLOP locked under
+    hash-lock <code>97655037…</code>, counterparty
+    <code>agentchainlab.near</code>. No NEAR leg is planned — it refunds
+    free at timeout, which makes the whole rehearsal cost ~0.01 FLOP
+    in fees. The wallet page shows the lock via the account's
+    <code>reserved</code> field, since <code>/api/htlcs</code> only
+    indexes session payments, not swaps.</li>
+    <li><b>The explorer lies when its indexer is sick.</b> All night:
+    faucet grants frozen at 589, swap list empty, balance reads flaky —
+    while the chain ran perfectly (15 peers, finality lag 5). The
+    indexer was replaying a ~5,720-block (~2h) backlog. New rule:
+    compare <code>latestBlockNumber</code> to
+    <code>finality.bestBlock</code>; the gap is reporting lag, not
+    chain trouble. The mining page now shows miner/agent counts and an
+    INDEXER-behind flag so this can't fake an outage again.</li>
+    <li><b>We're not waiting alone.</b> The same stats dump put real
+    numbers on the waiting room: <b>265 registered miners, 13,443
+    active agents, 33k accounts</b> — and still ~zero spend. Every
+    calibrated miner on devnet is staked, sponsored, and idle together.
+    When the order book and sessions wake up, there will be no shortage
+    of supply competing for it.</li>
+  </ul>
+</div>

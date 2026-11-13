@@ -260,7 +260,10 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   versioning. Talisman custom-network config: RPC
   `wss://rpc.devnet.flop.network`, symbol FLOP, 18 decimals, explorer
   `https://explorer.devnet.flop.network`, testnet ✓, CheckMetadataHash
-  unchecked.
+  unchecked. Talisman ADD failed in practice (dedups by chain identity
+  — merged into its built-in zkVerify entry / refused the custom add);
+  doesn't matter: extension still signs by genesis hash. Polkadot.js
+  Apps is the fallback UI for custom endpoints.
 
 ## FLOP key/control model (verified 2026-11-11)
 - Bridge agent address is **bridge-custodial**: ed25519 pubkey of our
@@ -291,7 +294,32 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   Failed dispatch still burns nonce+fee. HTLC auto-refunds at timeout
   if the NEAR leg never completes (NEAR leg = real mainnet NEAR, so
   refund is the free dry-run outcome). First offer: 10 FLOP locked
-  under hash-lock 97655037… (tx 0x2cf55ce5).
+  under hash-lock 97655037… (tx 0x2cf55ce5) — visible on our wallet
+  page via the account's `reserved` field; `/api/htlcs` does NOT cover
+  cross-chain swaps (it indexes session-payment HTLCs only — 6,776 of
+  them; swap = +1 on top, unlisted). UI "Recent FLOP_NEAR swaps" is
+  indexer-fed (lags); the page's Contracts tab is the authoritative
+  view for an open offer. Timelock rule backed by
+  stats.finality.foreignTimeoutMargin.recommendedMinimumMarginBlocks
+  = 3605 (~1h): foreign-chain clocks can't be frozen by FLOP safe
+  mode, so the FLOP leg must outlive the NEAR leg + margin.
+
+## Explorer indexer vs chain (2026-11-13 episode)
+- The explorer API + faucet run off a shared **indexer** that can fall
+  behind the chain. Overnight it stalled ~5,720 blocks (~2h) behind:
+  swap lists empty, faucet `indexer_stale`/unavailable, pendingGrants
+  frozen at 589 — while the chain itself was perfectly healthy
+  (15 peers, finalizedLag 5, ~1.2s blocks). **Rule: explorer lag ≠
+  chain trouble.** Check `/api/stats`: `latestBlockNumber` (indexed
+  position) vs `finality.bestBlock` (chain head) — the gap is the
+  indexer backlog. Chain-direct reads (account `free`/`reserved` via
+  WS RPC) were never affected; our wallet page's live path bypasses
+  the indexer entirely.
+- `/api/stats` population numbers (don't estimate from API pages —
+  they cap ~20): `registeredMiners` **265**, `activeAgents` **13,443**,
+  `totalAccounts` 33,376, `activeValidators` 13, `flopLocked` ~619
+  FLOP, `txVolume24h` ~219k. Crowded devnet, zero spend — the demand
+  bottleneck is economic, not headcount.
 - **Live FLOP (post-devnet)**: same model — control = key possession.
   Miner earnings accrue to the miner address (its key lives on the
   GPU host; keep `signer`+`miner-key.json` safe). A personal wallet =

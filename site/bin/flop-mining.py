@@ -260,6 +260,11 @@ def main():
             "sessions_active": net.get("activeHTLCs"),
             "proofs_24h": net.get("proofs24h"),
             "latest_block": net.get("latestBlockNumber"),
+            "best_block": (net.get("finality") or {}).get("bestBlock"),
+            "index_lag": ((net.get("finality") or {}).get("bestBlock") or 0)
+                - (net.get("latestBlockNumber") or 0) or None,
+            "registered_miners": net.get("registeredMiners"),
+            "active_agents": net.get("activeAgents"),
         },
         "sponsorship": sponsor,
         "hardware": {"gpu": s.get("GPU", "")},
