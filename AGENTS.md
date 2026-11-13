@@ -46,16 +46,23 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   has `automatic_full`; capacity can sell out again so keep the retry).
   `*/3` runs `health.sh`.
 - Miner address: `5DLMZtB5it7s6DZRmd98ABzfY8zPx9JBAAcvCtgXTL4ttSkC`
+- **Serving nuance (2026-11-13)**: worker logs declare capacity
+  ("capacity rate: 1 fits 4 sessions on cap 3") but `/session/info`
+  reports `is_ready: false`, `capacity_sessions: null` — appears to be
+  "accepting right now" vs "declared" semantics, not an outage (chain
+  `is_active`, calibration valid to block ~4.18M). Don't panic on
+  is_ready:false alone; check worker logs for the capacity-rate line.
 - **Ghost tasks** = the protocol's own synthetic work: after registration
   the core host fires an encrypted burst of micro-benchmarks at the new
   miner (X25519 ghost key decrypts them via the mailbox on the miner
   port), each scored vs `gn_weight_expected`. Ours: 72 tasks, all
   completed, blocks 3535729–3535939 → produced the "64 verified jobs →
-  cap 3 GFLOP/s" calibration. They arrive in a per-miner burst then
-  stop (recent thousands all target other calibrating miners). Explorer
-  API: `/api/ghost-tasks` (no target filter — paginate). This is the
-  ONLY work flowing: ~7000 payment sessions exist but only 6 ever
-  spent (0.774 FLOP total); proofs24h 0. Ghost tasks ≠ paid work.
+  cap 3 GFLOP/s" calibration. The burst is per-miner but the mailbox is
+  global — nonces are a shared counter (ours now in the millions) and a
+  trickle still reaches us post-calibration (~16/24h on 11-13), not zero.
+  Explorer API: `/api/ghost-tasks` (no target filter — paginate). This
+  is the ONLY work flowing: ~6,787 payment sessions exist but only 6
+  ever spent (0.774 FLOP total); proofs24h 0. Ghost tasks ≠ paid work.
 - **Testnet readiness notes (from devnet calibration)**:
   - The ghost-task burst fires ~5 min after registration and runs
     ~3.5 min — no warning, one shot. Register ONLY with a fully
@@ -108,9 +115,11 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   2026-11-12** — approved, verified, routable. Marketplace stats: 100%
   availability (sparse samples), 329ms TTFT — 2nd fastest of 4
   providers (AnonInference 261ms BTC-only, Numes 1.6s, amazee 4.2s).
-  Agent note: ~1 reconnect/min on the outbound session — watch it,
-  routing rank is measured health/latency. Check: `numes provider
-  status --profile gpt-oss-a4000` on the box.
+  Agent note (updated 2026-11-13): gpt-oss session settled — 58
+  reconnects/24.6h (~2.4/hr). The flapper is **or-tail**: ~55
+  reconnects/hr sustained post-approval. Session stays `connected` and
+  offers routable, but watch it — routing rank is measured
+  health/latency. Check: `numes provider status --profile <p>` on box.
 - **Reseller experiment (2026-11-12)**: second profile `or-tail` on the
   same box — `openrouter` source kind, same AgentChainLab provider,
   second endpoint. Sells 3 TheDrummer RP fine-tunes absent from the
@@ -135,8 +144,8 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   `/var/www/agentchainlab/numes.json`. SSH key for the probe box:
   `/root/.flop/vast_ed25519` on the droplet; NUMES_SSH_* in flop-ops.env.
   Catalogue data is BTC-key-scoped — BTC keys see ONLY BTC-priced models
-  (14 frontier-scale models at probe start; our gpt-oss-20b would be the
-  only sub-frontier BTC offer once approved).
+  (**19 as of 2026-11-13**, up from 14 at probe start; our gpt-oss-20b
+  remains the only sub-frontier BTC offer).
 - Caveats: only BTC-key customers can buy (small pool — we were the only
   BTC offer at scan time); tool capability needs vLLM's tool-call parser
   (without it validation fails `invalid_tool_call`); numes admin review
@@ -176,8 +185,8 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 - **Kibble→FLOP bridge**: `POST kibble.world/api/flop-devnet` with
   {action:status|address|faucet|chat|balance|transfer, seed_hex}. Our DID's
   assigned devnet address ROTATES FREQUENTLY without moving balances —
-  4 addresses in 3 days (5DUAJj3Y → 5GpjXEBu → 5EkGcLZf → 5DcAhExf
-  as of 2026-11-13; re-check via action:"address"). Grants claimed to a
+  5+ addresses in 4 days (5DUAJj3Y → 5GpjXEBu → 5EkGcLZf → …3joBa3 →
+  5DcAhExf as of 2026-11-13; re-check via action:"address"). Grants claimed to a
   rotated-out address STRAND there (custodial keys are bridge-side;
   transfer caps at 0.001; ~75 FLOP stranded across the 3 retired
   addresses so far). Bridge faucet action disabled.
@@ -362,10 +371,11 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   WS RPC) were never affected; our wallet page's live path bypasses
   the indexer entirely.
 - `/api/stats` population numbers (don't estimate from API pages —
-  they cap ~20): `registeredMiners` **265**, `activeAgents` **13,443**,
-  `totalAccounts` 33,376, `activeValidators` 13, `flopLocked` ~619
-  FLOP, `txVolume24h` ~219k. Crowded devnet, zero spend — the demand
-  bottleneck is economic, not headcount.
+  they cap ~20; refreshed 2026-11-13): `registeredMiners` **305**,
+  `activeAgents` **13,921**, `totalAccounts` 35,222,
+  `activeValidators` 13, `flopLocked` ~630 FLOP, `txVolume24h` ~211k.
+  Crowded devnet, zero spend — the demand bottleneck is economic, not
+  headcount. (Indexer lag currently 0 — the 11-13 stall resolved.)
 - **Live FLOP (post-devnet)**: same model — control = key possession.
   Miner earnings accrue to the miner address (its key lives on the
   GPU host; keep `signer`+`miner-key.json` safe). A personal wallet =
