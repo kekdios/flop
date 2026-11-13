@@ -32,10 +32,10 @@ def log(msg):
         pass
 
 
-def env_key():
+def env_key(name="KIBBLE_SEED"):
     for line in open(ENV_PATH):
         line = line.strip()
-        if line.startswith("KIBBLE_SEED="):
+        if line.startswith(name + "="):
             return line.split("=", 1)[1].strip().strip('"').strip("'")
     return ""
 
@@ -78,6 +78,13 @@ def main():
     if not seed:
         log("no KIBBLE_SEED in env — skipping")
         return
+    # Also top up the NEAR-derived multichain address when it's low —
+    # rides the heartbeat's 4h cadence instead of the nightly cron.
+    mc = env_key("MULTICHAIN_ADDR")
+    if mc:
+        m = fund(mc)
+        if m.get("success"):
+            log("multichain %s… funded +25" % mc[:8])
     addr = (call("address", seed) or {}).get("address", "")
     bal = call("balance", seed)
     b = bal.get("balance") or {}
