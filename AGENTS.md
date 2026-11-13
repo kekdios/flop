@@ -274,6 +274,22 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   (consumer GPUs, Mac Minis) is structural, not charity. Our devnet
   work (registration, calibration, Kibble attests) is the attested
   position that converts to allocation.
+- **Validator landscape (verified 2026-11-13)**: separate role from
+  miners — consensus/verification, NO GPU needed (Mac Mini viable;
+  the retail-pitch door). Economics: inference fees split 85% miner /
+  15% validator (validators earn a cut of ALL network inference, not
+  just their own work) + share of the 96 FLOP/block role rewards.
+  FLOP takes 0%. Stake floor 1,200,000 FLOP (not faucet-reachable —
+  entry = sponsored grant or delegation). Devnet set: 14 total —
+  11 at ~2.9M self-stake (institutional cluster), 2 at the 1.2M
+  floor, 1 sponsored at 1.32M. Delegation/nomination exists
+  (delegatedStake field, one live delegator). Sponsor path is built
+  into our own pack: sponsor-grant.sh GRANT_ROLE=validator +
+  sponsor-request.mjs accepts a validator account.json ({secretSeed,
+  ss58Address}). RULE: never mine on a validator account — "a
+  validator that mines becomes the whole committee" (miner.env).
+  Validator apps ~4k vs miner ~9k — less crowded track; a sponsored
+  validator node on the droplet = second attested position.
 - Devnet self-identifies as **zkVerify** (chain properties) — FLOP is
   built on Horizen Labs' zkVerify runtime (ZK-proof-verification
   Substrate chain) + custom pallets (sessions, HTLCs, miner staking,
