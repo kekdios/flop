@@ -160,6 +160,7 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
   var balances = {};   // label -> FLOP number or null
   var stakes = {};     // label -> sponsored-stake FLOP (from flop.json)
   var addrs = {};      // label -> resolved address (from flop.json)
+  var locked = {};     // label -> reserved FLOP (HTLC swaps etc.)
 
   function setStatus(s, cls) {
     statusEl.textContent = s;
@@ -181,6 +182,14 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
     return Number(free) / 1e18;
   }
 
+  function reservedBalance(hexVal) {
+    var b = hexBytes(hexVal);
+    if (b.length < 48) return 0;
+    var res = 0n;
+    for (var i = 15; i >= 0; i--) res = (res << 8n) | BigInt(b[32 + i]);
+    return Number(res) / 1e18;
+  }
+
   function render() {
     cardsEl.innerHTML = '';
     var total = 0, any = false;
@@ -198,6 +207,12 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
       ad.textContent = addrs[a.label] || a.address;
       var r = document.createElement('div'); r.className = 'role'; r.textContent = a.role;
       c.appendChild(lbl); c.appendChild(v); c.appendChild(ad); c.appendChild(r);
+      if (typeof locked[a.label] === 'number' && locked[a.label] > 0) {
+        var lk = document.createElement('div'); lk.className = 'role';
+        lk.textContent = 'locked ' + locked[a.label].toLocaleString(undefined,
+          {maximumFractionDigits: 4}) + ' FLOP (HTLC swap — refunds at timeout)';
+        c.appendChild(lk);
+      }
       if (typeof stakes[a.label] === 'number' && stakes[a.label] > 0) {
         var st = document.createElement('div'); st.className = 'role';
         st.textContent = 'staked ' + stakes[a.label].toLocaleString(undefined,
@@ -218,6 +233,7 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
       (d.accounts || []).forEach(function (a) {
         if (typeof a.free === 'number') balances[a.label] = a.free;
         if (a.address) addrs[a.label] = a.address;
+        if (typeof a.reserved === 'number') locked[a.label] = a.reserved;
       });
       render();
       setStatus('devnet RPC unreachable — showing droplet snapshot from ' +
@@ -254,6 +270,7 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 22px 20px 48px; }
         try {
           var val = await call('state_getStorage', [a.key]);
           balances[a.label] = val ? freeBalance(val) : 0;
+          if (val) locked[a.label] = reservedBalance(val);
         } catch (e) { /* leave as — */ }
         settled++;
         render();

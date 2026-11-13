@@ -170,6 +170,10 @@ def main():
                 raw = bytes.fromhex(val[2:])
                 free = int.from_bytes(raw[16:32], "little")
                 rec["free"] = free / 1e18
+                # reserved u128 follows free — HTLC swaps park funds here
+                reserved = int.from_bytes(raw[32:48], "little")
+                if reserved:
+                    rec["reserved"] = reserved / 1e18
             else:
                 rec["free"] = 0
             if label == "miner":
