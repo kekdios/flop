@@ -290,6 +290,15 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   validator that mines becomes the whole committee" (miner.env).
   Validator apps ~4k vs miner ~9k — less crowded track; a sponsored
   validator node on the droplet = second attested position.
+  **DEFERRED (decided 2026-11-13)**: not pursuing a validator seat
+  pre-testnet — miner + Numes monitoring load is enough, and testnet
+  launch chaos is the wrong time to add a new role's failure modes.
+  No validator artifact is published yet anyway (releases.json has
+  only cli/miner-worker/miner-vllm-toploc — watch for a node/validator
+  key appearing). Revisit after testnet settles: path = validator
+  application → sponsored grant (1.2M floor is far beyond faucet
+  funds; self-stake unrealistic) or delegation if the floor accepts
+  it. Host: droplet or dedicated VPS, Substrate node, no GPU.
 - Devnet self-identifies as **zkVerify** (chain properties) — FLOP is
   built on Horizen Labs' zkVerify runtime (ZK-proof-verification
   Substrate chain) + custom pallets (sessions, HTLCs, miner staking,
