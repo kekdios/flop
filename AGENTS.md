@@ -262,6 +262,18 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   handles rotation).
 
 ## FLOP chain stack notes
+- **Leadership (verified 2026-11-13 via docs.flop.network + press)**:
+  Arthur Hayes is founder/CEO day-to-day — his ONLY active operating
+  project. Maelstrom (his family office) is the SOLE funder: no
+  presale, no VC, no pre-mine, 2+ yr runway; Labs' exposure = 8
+  FLOP/block mint shared with team. CTO Sergey Vidyuk (ex-BitMEX infra),
+  CSO Shu Duan (ex-DB). Thesis: compute oversupply + agents need a
+  non-freezable payment rail (anti-stablecoin argument).
+  **Testnet Nov 24, 2026; airdrop Q4 2026; genesis Q1 2027.** Fair
+  launch ⇒ mining IS the token distribution ⇒ retail recruitment
+  (consumer GPUs, Mac Minis) is structural, not charity. Our devnet
+  work (registration, calibration, Kibble attests) is the attested
+  position that converts to allocation.
 - Devnet self-identifies as **zkVerify** (chain properties) — FLOP is
   built on Horizen Labs' zkVerify runtime (ZK-proof-verification
   Substrate chain) + custom pallets (sessions, HTLCs, miner staking,
