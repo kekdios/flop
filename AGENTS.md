@@ -133,6 +133,18 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   reconnects/hr sustained post-approval. Session stays `connected` and
   offers routable, but watch it — routing rank is measured
   health/latency. Check: `numes provider status --profile <p>` on box.
+- **Human login expires ~72h (2026-11-14)**: the device-flow sign-in
+  rolls a refresh credential that died Nov 14 ~11:40 UTC → cloud
+  `provider status`/`remote` commands hang on a device-auth prompt.
+  DAEMONS KEEP SERVING (process-local tokens; sessions stayed
+  `connected`). Monitoring now uses `provider status --profile X
+  --local` (works unauthenticated; exposes sessionState/sourceHealth/
+  reconnects but not platform listings). Re-auth = user approves a
+  device code at auth.numes.ai (generate via `numes auth login
+  --login-method device`) — restores earnings/remote/platform queries.
+  Collector exposes `mgmt_auth` ("local_only" = expired). Also:
+  api.numes.ai 403s default `Python-urllib` UA — collector sends a UA
+  header now (same class of block as the FLOP faucet 403).
 - **Reseller experiment (2026-11-12)**: second profile `or-tail` on the
   same box — `openrouter` source kind, same AgentChainLab provider,
   second endpoint. Sells 3 TheDrummer RP fine-tunes absent from the

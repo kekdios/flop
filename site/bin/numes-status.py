@@ -47,7 +47,8 @@ def ssh(cfg, script, timeout=25):
 
 def api(path, key, timeout=15):
     req = urllib.request.Request(API + path,
-                                 headers={"Authorization": "Bearer " + key})
+                                 headers={"Authorization": "Bearer " + key,
+                                          "User-Agent": "flop-ops-collector/1.0"})
     return json.loads(urllib.request.urlopen(req, timeout=timeout).read())
 
 
@@ -63,10 +64,13 @@ def main():
             r = ssh(cfg, r'''
 export PATH=$HOME/.local/bin:$PATH
 echo "STATUS<<"
-numes provider status --profile gpt-oss-a4000 2>/dev/null
+numes provider status --profile gpt-oss-a4000 --local 2>/dev/null
 echo ">>"
 echo "STATUS2<<"
-numes provider status --profile or-tail 2>/dev/null
+numes provider status --profile or-tail --local 2>/dev/null
+echo ">>"
+echo "AUTH<<"
+timeout 10 numes auth status 2>/dev/null
 echo ">>"
 echo "GPU=$(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader 2>/dev/null | head -1)"
 echo "VLLM=$(curl -s --max-time 5 http://127.0.0.1:8000/v1/models | python3 -c 'import json,sys;d=json.load(sys.stdin);print(len(d.get("data",[])))' 2>/dev/null)"
@@ -120,6 +124,12 @@ echo "RECONNECTS=$(grep -c 'reconnect' /root/vllm.log 2>/dev/null)"
                     except (ValueError, AttributeError):
                         out.setdefault("profiles", {})["or-tail"] = {
                             "error": "status_parse_error"}
+                if "AUTH<<" in txt:
+                    try:
+                        ablob = txt.split("AUTH<<", 1)[1].split(">>", 1)[0]
+                        out["mgmt_auth"] = json.loads(ablob).get("status")
+                    except (ValueError, AttributeError):
+                        pass
                 for line in txt.splitlines():
                     if line.startswith("GPU="):
                         parts = [p.strip() for p in line[4:].split(",")]
