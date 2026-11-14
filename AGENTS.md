@@ -204,6 +204,18 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 - Caveats: only BTC-key customers can buy (small pool); numes admin
   review is manual — days possible. OR spend is wholesale cost —
   or-tail loses money if OR raises prices under our fixed markup.
+- **Market context (X survey 2026-11-14)**: Numes is a Nov-2026 launch
+  (~500 followers); the $0 frontier models in our BTC catalogue
+  (kimi-k3.1-pro, glm-5.3, nemotron-3-ultra, dealignai set) are the
+  Nov-11 launch promo — subsidized, hosted by amazee (first partner),
+  "limited time." No provider profit/volume reports exist publicly;
+  buyer demand ≈ zero confirmed externally too. Calle's Tinfoil→Numes
+  resale loop advertised 11-13 doesn't work for ordinary providers
+  (Tinfoil source is admin-only) — our OR passthrough is ahead of it.
+  E2EE inference (Nesa "Equivariant Encryption") launched 11-13.
+  **Watch trigger**: if the $0 promo models get priced, the market
+  gets real — re-check demand then; the thedrummer scarce-tail thesis
+  is unaffected by free frontier models (non-substitutable niche).
 - **Display bug (2026-11-13, reported)**: Numes "Prices BTC" view renders
   SATOSHIS with the ₿ glyph — our $0.03/$0.14 USD-indexed listing shows
   as "₿42 / ₿197". ₿ means whole BTC everywhere else; reads ~8 orders
