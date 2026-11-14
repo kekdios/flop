@@ -68,7 +68,8 @@
       "Exec(~/.flop/numes-scan.py)",
       "Exec(cp)",
       "Exec(mv)",
-      "Exec(tail)"
+      "Exec(tail)",
+      "Exec(md5sum)"
     ]
   }
 }
