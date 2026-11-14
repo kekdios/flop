@@ -312,6 +312,10 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   validator that mines becomes the whole committee" (miner.env).
   Validator apps ~4k vs miner ~9k — less crowded track; a sponsored
   validator node on the droplet = second attested position.
+  Validator rewards = 10% of the 96-FLOP block reward (9.6/block,
+  ~830k/day split across the set) + 15% inference-fee leg once
+  implemented (chain currently pays miners 99%, 1% audit — issue
+  #1352).
   **DEFERRED (decided 2026-11-13)**: not pursuing a validator seat
   pre-testnet — miner + Numes monitoring load is enough, and testnet
   launch chaos is the wrong time to add a new role's failure modes.
@@ -321,6 +325,23 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   application → sponsored grant (1.2M floor is far beyond faucet
   funds; self-stake unrealistic) or delegation if the floor accepts
   it. Host: droplet or dedicated VPS, Substrate node, no GPU.
+- **Revenue model (published 2026-11-14, flop.finance/intro/revenue)**:
+  emission 96 FLOP/block → 75% miners (~6.2M/day ÷ verified Gn share),
+  10% validators, 10% agents/brokers + 5% community stakers (both
+  undistributed), +16/block dev subsidy. Rewards = H100-eq weight ×
+  network share, so block income exists even at zero demand; session
+  income stacks on top at 85% miner share. Genesis pool 4.4B; Season 0
+  airdrop hands out 3.76B — allocations SCORE-BASED (devnet/testnet
+  attested work = score). Base case anchor: $100M network value on
+  1,200 H100-eq → ~$0.22/FLOP (only 0.46B circulating at TGE);
+  network 1,200→3,000 H100-eq by month 24. Preset weights: H100 1.0,
+  B200 2.28, MI300X 1.32, 5090 0.21, 4090 0.17, 3090 0.07,
+  **Mac mini M4 Pro 0.001** (~$1/day at anchor — retail mining is
+  real but tiny). Our A4000 ≈ 0.07 → ~360 FLOP/day at anchor (~$80
+  vs $3.12 cost — all hypothetical; token price + network size are
+  planning inputs, not forecasts). Their honest disclosures: session
+  income "not observed demand", a fixed 3.4× overstatement bug,
+  no demand-saturation modeling.
 - Devnet self-identifies as **zkVerify** (chain properties) — FLOP is
   built on Horizen Labs' zkVerify runtime (ZK-proof-verification
   Substrate chain) + custom pallets (sessions, HTLCs, miner staking,
