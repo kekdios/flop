@@ -108,35 +108,54 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 ## Numes provider probe (started 2026-11-11)
 - Separate demand-measurement experiment: serve inference on numes.ai
   marketplace, BTC-settled (Stripe USD payouts impossible from Ecuador).
-- **Box**: vast.ai instance `60277620` (contract), RTX A4000 16GB, Quebec,
-  ~$0.208/hr all-in (~$5/day, ~$150/mo) — CORRECTED 2026-11-14: invoice
-  shows GPU $0.0787/hr + **storage $0.1296/hr** (100GB disk at premium
-  rate, only 14GB used — storage is 62% of the bill). Vast bills
-  allocated, not used; can't shrink an existing disk. Credit ~$20.86
-  left (of $35) as of 11-14.
-  - SSH: `ssh -i ~/.flop/vast_ed25519 -p 40549 root@172.97.226.219`
-    (needs `-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
-    proxy alt: `-p 27640 root@ssh5.vast.ai`). If IP/port change, re-pull:
-    `~/.flop/venv/bin/vastai show instance 60277620 --raw`
-  - vLLM serves `openai/gpt-oss-20b` (mxfp4/MARLIN) on :8000, mapped
-    publicly at 172.97.226.219:40524. Working flags (16GB is TIGHT —
-    weights 13.8 GiB): `--max-model-len 4096 --max-num-seqs 4
-    --gpu-memory-utilization 0.97 --enforce-eager --tool-call-parser openai`.
-    Higher ctx/lower util = KV OOM. `/root/start-vllm.sh` restarts it;
-    `/root/onstart.sh` is boot config (vLLM + numes daemon).
-  - numes agent v0.0.50 at `/root/.local/bin/numes`, daemon runs
-    `numes provider daemon --profile gpt-oss-a4000` (detached, PPID 1).
-- **Offer**: provider "AgentChainLab", listing openai/gpt-oss-20b,
-  `--currency BTC-indexed` (USD anchors, sats payout), $0.03/1M prompt,
-  $0.14/1M completion = parity with Numes-hosted USD offer. **LIVE as of
-  2026-11-12** — approved, verified, routable. Marketplace stats: 100%
-  availability (sparse samples), 329ms TTFT — 2nd fastest of 4
-  providers (AnonInference 261ms BTC-only, Numes 1.6s, amazee 4.2s).
-  Agent note (updated 2026-11-13): gpt-oss session settled — 58
-  reconnects/24.6h (~2.4/hr). The flapper is **or-tail**: ~55
-  reconnects/hr sustained post-approval. Session stays `connected` and
-  offers routable, but watch it — routing rank is measured
-  health/latency. Check: `numes provider status --profile <p>` on box.
+- **GPU box RETIRED 2026-11-14**: vast.ai instance `60277620` (A4000)
+  destroyed. True cost discovered ~$0.208/hr ≈ $5/day ≈ $150/mo —
+  invoice showed GPU $0.0787/hr + **storage $0.1296/hr** (100GB disk at
+  premium rate, 14% used; vast bills allocated, can't shrink). Demand
+  measurement answer: near-zero BTC traffic (74 vLLM reqs/46h incl.
+  health checks + our own fallback calls), $0 settled earnings.
+  Server-side `pending: 0.006166 BTC` — CANNOT be real earnings at our
+  volume; unit-ambiguous artifact, ask support alongside the ₿ ticket.
+  - Reprovision recipe (if gpt-oss demand appears): cheap-storage host,
+    ~50GB disk, vLLM gpt-oss-20b flags (16GB TIGHT — 13.8 GiB weights):
+    `--max-model-len 4096 --max-num-seqs 4 --gpu-memory-utilization 0.97
+    --enforce-eager --tool-call-parser openai` (~30 min end to end).
+  - numes agent v0.0.51: self-contained 95MB at
+    `~/.local/share/numes/current/numes`; profiles portable via
+    `~/.config/numes/provider/profiles/<name>/` (profile.toml/json +
+    secrets/transport-enrollment.secret = endpoint identity; daemon
+    refuses to start unless the WHOLE config chain is mode 700).
+- **Offer DELISTED 2026-11-14**: gpt-oss-a4000 endpoint removed via
+  `numes provider profile remove --profile gpt-oss-a4000 --confirm`
+  (remote_state: deleted; earnings/history preserved server-side).
+  Numery API endpoint-delete can 500 transiently — retry worked.
+  (Historical: offer was BTC-indexed USD anchors, $0.03/$0.14 per 1M,
+  parity with Numes-hosted; went live 11-12, 329ms TTFT 2nd of 4
+  providers. or-tail flapped ~55-66 reconnects/hr throughout while
+  staying `connected` — routing-rank drag to watch on its new host.)
+- **Human login expires ~72h (2026-11-14)**: the device-flow sign-in
+  rolls a refresh credential that died Nov 14 ~11:40 UTC → cloud
+  `provider status`/`remote` commands hang on a device-auth prompt.
+  DAEMONS KEEP SERVING (process-local tokens; sessions stayed
+  `connected`). Monitoring now uses `provider status --profile X
+  --local` (works unauthenticated; exposes sessionState/sourceHealth/
+  reconnects but not platform listings). Re-auth = user approves a
+  device code at auth.numes.ai (generate via `numes auth login
+  --login-method device`) — restores earnings/remote/platform queries.
+  **Re-authed 2026-11-14 ~13:48 UTC → next expiry expected ~Nov 17**;
+  when `mgmt_auth` flips to "expired" just rerun the device flow.
+  **Credential is single-chain rotating**: a copy works until the next
+  rotation elsewhere invalidates it (~minutes if daemons share the
+  chain) — don't copy human-auth between hosts as a live credential;
+  also endpoint-deletion-class ops may demand a FRESH approval even
+  when reads pass.
+  (Longer-term: investigate whether daemons can run on a non-expiring
+  credential so this stops being a ~3-day chore.)
+  Collector exposes `mgmt_auth` ("signed_in:device" vs "expired" —
+  `auth status` top-level stays "local_only" even when authed; watch
+  `signed_in_methods`). Also:
+  api.numes.ai 403s default `Python-urllib` UA — collector sends a UA
+  header now (same class of block as the FLOP faucet 403).
 - **Human login expires ~72h (2026-11-14)**: the device-flow sign-in
   rolls a refresh credential that died Nov 14 ~11:40 UTC → cloud
   `provider status`/`remote` commands hang on a device-auth prompt.
@@ -155,37 +174,36 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   `signed_in_methods`). Also:
   api.numes.ai 403s default `Python-urllib` UA — collector sends a UA
   header now (same class of block as the FLOP faucet 403).
-- **Reseller experiment (2026-11-12)**: second profile `or-tail` on the
-  same box — `openrouter` source kind, same AgentChainLab provider,
-  second endpoint. Sells 3 TheDrummer RP fine-tunes absent from the
-  Numes catalogue (scarce-tail play), all BTC-indexed: unslopnemo-12b
-  $0.52/$0.52, cydonia-24b-v4.1 $0.39/$0.65, skyfall-36b-v2 $0.72/$1.04
-  (~30% over OR list). OR key = dedicated `numes-hosted` key, $5-capped,
-  stored in `/root/.numes-or-env` (mode 600) — daemon needs it via env.
+- **Reseller — SOLE OFFER since 2026-11-14**: profile `or-tail`,
+  `openrouter` source kind, provider AgentChainLab. Sells 3 TheDrummer
+  RP fine-tunes absent from the Numes catalogue (scarce-tail play),
+  all BTC-indexed: unslopnemo-12b $0.52/$0.52, cydonia-24b-v4.1
+  $0.39/$0.65, skyfall-36b-v2 $0.72/$1.04 (~30% over OR list).
+  **Moved to the ops droplet 2026-11-14** (no GPU needed — pure OR
+  passthrough): systemd `numes-or-tail.service` (enabled, Restart=
+  always) → `numes provider daemon --profile or-tail`; profile at
+  `/root/.config/numes/provider/profiles/or-tail/`; OR key =
+  dedicated `numes-hosted` $5-capped key in `/etc/numes-or.env`
+  (mode 600, EnvironmentFile). numes binary at `/root/.local/bin/numes`
+  (v0.0.51). Endpoint `e79e325f-…` stayed `active/healthy` through the
+  move — identity is the enrollment secret, not the host/IP.
   CLI: `setup openrouter` needs uniform --prompt-price; per-model prices
   get edited in the TUI (`provider tui`, needs ssh -tt) + `p` publish.
-  Endpoint **approved + active ~17:40 UTC same-day**; transport flapped
-  while pending_approval (normal), session settled to connected on
-  approval. Provider board now shows 4 models / 2 endpoints.
-  onstart.sh runs both daemons. `numes-status.py` collects both
-  profiles → /numes.html shows the reseller card + marks all our
-  models in the BTC catalogue table.
 - Numery keys in `~/.flop/numes.env`: NUMES_API_KEY (USD inference,
   catalogue reads), NUMES_MGMT_KEY (management), NUMES_BTC_KEY (BTC
   inference, customer-side loop testing later; ALSO on droplet in
   /etc/flop-ops.env for the collector).
 - **Status page**: `/numes.html` — collector `site/bin/numes-status.py` →
   `/usr/local/lib/flop-ops/numes-status.py`, cron `*/10`, writes
-  `/var/www/agentchainlab/numes.json`. SSH key for the probe box:
-  `/root/.flop/vast_ed25519` on the droplet; NUMES_SSH_* in flop-ops.env.
+  `/var/www/agentchainlab/numes.json`. Since 11-14 it checks the local
+  droplet daemon (`--local` status + `auth status`); NUMES_SSH_* vars in
+  flop-ops.env are stale (vast key kept at `/root/.flop/vast_ed25519`
+  for future reprovisioning).
   Catalogue data is BTC-key-scoped — BTC keys see ONLY BTC-priced models
-  (**19 as of 2026-11-13**, up from 14 at probe start; our gpt-oss-20b
-  remains the only sub-frontier BTC offer).
-- Caveats: only BTC-key customers can buy (small pool — we were the only
-  BTC offer at scan time); tool capability needs vLLM's tool-call parser
-  (without it validation fails `invalid_tool_call`); numes admin review
-  is manual — days possible. Destroy instance if probe is uneconomical:
-  `~/.flop/venv/bin/vastai destroy instance 60277620`.
+  (**18 as of 2026-11-14**; our 3 thedrummer resells marked `our_listed`).
+- Caveats: only BTC-key customers can buy (small pool); numes admin
+  review is manual — days possible. OR spend is wholesale cost —
+  or-tail loses money if OR raises prices under our fixed markup.
 - **Display bug (2026-11-13, reported)**: Numes "Prices BTC" view renders
   SATOSHIS with the ₿ glyph — our $0.03/$0.14 USD-indexed listing shows
   as "₿42 / ₿197". ₿ means whole BTC everywhere else; reads ~8 orders
@@ -266,9 +284,10 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   approve link → `kibble-approve.py` (systemd `flop-kibble-approve`,
   127.0.0.1:8578, nginx `/kibble-approve`) fires detached CLAIM+RESULT.
   FAIL drafts are dropped (logged with reason). Draft failover: on
-  nano-gpt error/empty the drafter retries against our vast.ai vLLM box
-  (DRAFT_FALLBACK_URL → `openai/gpt-oss-20b`, :40524) — only fires on
-  primary failure to keep Numes demand measurement clean.
+  nano-gpt error/empty the drafter retries against OpenRouter
+  (DRAFT_FALLBACK_URL → `openai/gpt-oss-20b`, DRAFT_FALLBACK_KEY in
+  flop-ops.env; moved off the retired vLLM box 2026-11-14) — only
+  fires on primary failure.
   - **Auto-approve**: `KIBBLE_AUTO_UNTIL` (epoch) enables bounded
     judge-PASS auto-delivery — env-tunable `AUTO_PER_RUN`/`AUTO_PER_HOUR`
     (currently 15/150), 3s stagger, `NOTIFY_OFF=1` suppresses Resend

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>AgentChainLab — Numes provider probe</title>
-<meta name="description" content="Live status of the AgentChainLab Numes provider probe: offer state, endpoint health, GPU, and the BTC-scoped market." />
+<meta name="description" content="Live status of the AgentChainLab Numes provider: offer state, endpoint health, and the BTC-scoped market." />
 <link rel="icon" type="image/png" href="/assets/icon_flask.png" />
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
@@ -170,14 +170,16 @@ td.ours { color: var(--accent-secondary); font-weight: 700; }
   function render(d) {
     var cards = '';
 
-    var pstate = d.provider_state || (d.ssh_ok ? 'unknown' : 'ssh unreachable');
+    var pstate = d.provider_state || (d.probe_ok ? 'unknown' : 'probe failed');
     cards += card('Provider state', esc(pstate.replace(/_/g, ' ')), stateClass(pstate),
       esc(d.next_action || ''));
 
     var rt = d.runtime || {};
     var health = [];
-    health.push('vLLM: ' + (d.vllm_models === '1' ? 'serving ' + esc(d.model)
-                             : (d.vllm_models ? esc(d.vllm_models) + ' models' : 'down')));
+    if (d.vllm_models !== undefined) {
+      health.push('vLLM: ' + (d.vllm_models === '1' ? 'serving ' + esc(d.model)
+                               : (d.vllm_models ? esc(d.vllm_models) + ' models' : 'down')));
+    }
     health.push('source: ' + esc(rt.source_health || '—'));
     health.push('session: ' + esc(rt.session || '—') +
                 (rt.reconnects != null ? ' (' + rt.reconnects + ' reconnects)' : ''));
@@ -260,10 +262,11 @@ td.ours { color: var(--accent-secondary); font-weight: 700; }
       return r.json();
     }).then(function (d) {
       render(d);
-      var cls = d.ssh_ok ? (d.provider_state &&
+      var cls = d.probe_ok ? (d.provider_state &&
                 /live|approved/i.test(d.provider_state) ? '' : 'warn') : 'down';
       setStatus('snapshot ' + (d.updated || '?') +
-                (d.ssh_ok ? '' : ' · probe box unreachable'), cls);
+                (d.probe_ok ? '' : ' · daemon check failed') +
+                (d.note ? ' · ' + esc(d.note) : ''), cls);
     }).catch(function () {
       setStatus('no snapshot yet — collector has not run', 'down');
     });

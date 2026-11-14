@@ -171,10 +171,13 @@ def llm_draft(env, job_text):
                "messages": [
                    {"role": "system", "content": DRAFT_SYS},
                    {"role": "user", "content": job_text[:3000]}]}
+    fb_headers = {"Content-Type": "application/json",
+                  "User-Agent": "flop-ops/1.0"}
+    if env.get("DRAFT_FALLBACK_KEY"):
+        fb_headers["Authorization"] = "Bearer " + env["DRAFT_FALLBACK_KEY"]
     req = urllib.request.Request(
         fb_url, data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json",
-                 "User-Agent": "flop-ops/1.0"}, method="POST")
+        headers=fb_headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=120) as r:
             out = json.loads(r.read())["choices"][0]["message"]["content"]
