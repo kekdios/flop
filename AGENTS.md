@@ -198,17 +198,21 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 - **Kibble→FLOP bridge**: `POST kibble.world/api/flop-devnet` with
   {action:status|address|faucet|chat|balance|transfer, seed_hex}. Our DID's
   assigned devnet address ROTATES FREQUENTLY without moving balances —
-  5+ addresses in 4 days (5DUAJj3Y → 5GpjXEBu → 5EkGcLZf → …3joBa3 →
-  5DcAhExf as of 2026-11-13; re-check via action:"address"). Grants claimed to a
-  rotated-out address STRAND there (custodial keys are bridge-side;
-  transfer caps at 0.001; ~75 FLOP stranded across the 3 retired
-  addresses so far). Bridge faucet action disabled.
+  5 addresses in 4 days (5DUAJj3Y → 5GpjXEBu → 5EkGcLZf → 5DcAhExf →
+  5Dhu1vbU as of 2026-11-14; re-check via action:"address"). Grants
+  claimed to a rotated-out address STRAND there (custodial keys are
+  bridge-side; transfer caps at 0.001; ~100 FLOP stranded across 4
+  retired addresses — if rotation keeps a daily pace, consolidate
+  stale-* cards into one "retired bridges" row). Bridge faucet
+  action disabled.
   chat → devnet gateway models = the demand path to miners
-  (served qwen2.5-0.5b-instruct, then switched to
-  nousresearch/arete-27b ~2026-11-13 — model list rotates; per-DID ~5s
-  rate limit; 401 persists EVEN WHEN FUNDED as of 11-13 — funding was
-  not the (only) gate, treat 401 as gateway-side auth failure;
-  "daily cap" = per-DID chat quota independent of balance). **flop-chat.py** (droplet cron
+  (catalog GREW 2026-11-14: qwen2.5-0.5b-instruct + qwen3-14b +
+  qwen3-coder-30b-a3b-instruct-fp8 — bigger miners onboarding
+  pre-testnet; arete-27b appeared transiently 11-13. Per-DID ~5s
+  rate limit; 401 persists EVEN WHEN FUNDED — funding was not the
+  gate, treat 401 as gateway-side auth failure; "daily cap" =
+  per-DID quota; gateway also 502s/times out — zero successful
+  chats ever logged). **flop-chat.py** (droplet cron
   `23 */4`) now SELF-FUNDS: resolves the current address → if free<5
   FLOP claims the anonymous 25 FLOP grant onto it → waits → chats.
   This collapses the rotation window to seconds (previously the 22:15
