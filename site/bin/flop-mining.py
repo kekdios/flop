@@ -284,7 +284,8 @@ def main():
             if WORKSIG_FILE.exists() else None
         WORKSIG_FILE.write_text(sig + "\n")
         if prev is not None and prev != sig:
-            subprocess.run([NOTIFY, prev, sig], check=False)
+            subprocess.run([NOTIFY, prev, sig,
+                            "settled,committed,inFlight"], check=False)
     except Exception:
         pass
 

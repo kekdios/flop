@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # Send a FLOP miner state-change alert via the Resend API.
-# Usage: notify.py <prev-signature> <new-signature>
+# Usage: notify.py <prev-signature> <new-signature> [field1,field2,...]
 # Signature: "<miner_state>|<gpu_state>|<calibration>|<sessions-bucket>"
+# Optional 3rd arg overrides slot labels (e.g. work counters:
+# "settled,committed,inFlight").
 # Config: /etc/flop-ops.env (RESEND_API_KEY, ALERT_TO, ALERT_FROM)
 import json
 import sys
@@ -42,10 +44,11 @@ def main():
     else:
         sender = "FLOP Ops <flop-ops@%s>" % frm
 
+    labels = sys.argv[3].split(",") if len(sys.argv) > 3 else FIELDS
     p, c = prev.split("|"), cur.split("|")
     changes = "; ".join(
         "%s: %s -> %s" % (n, a, b)
-        for n, a, b in zip(FIELDS, p, c)
+        for n, a, b in zip(labels, p, c)
         if a != b
     ) or ("%s -> %s" % (prev, cur))
 

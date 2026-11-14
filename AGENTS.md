@@ -46,6 +46,19 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   has `automatic_full`; capacity can sell out again so keep the retry).
   `*/3` runs `health.sh`.
 - Miner address: `5DLMZtB5it7s6DZRmd98ABzfY8zPx9JBAAcvCtgXTL4ttSkC`
+- **FIRST INBOUND SESSION (2026-11-14 ~04:04 UTC)**: external agent
+  `5CPwUPRRTpxgBCwCDQwEHT5njNAQurxRiEW7fdWZ9nBW9MoF` opened a payment
+  channel to our miner — escrow 0.0038 FLOP LOCKED, spot market, Soft
+  tier, our model hash, `open_until_timeout`, still open. First-ever
+  non-self activity on the demand path, ~10 days pre-testnet (likely
+  protocol/agent probing after Hayes's retail recruitment wave).
+  `chain.work.inFlight` counts in-flight work obligations INSIDE open
+  channels (pulsed 0→1→0 four times overnight while the session stayed
+  open — items enter then expire/leave without commit); settled and
+  committed still 0. Watch for committed/settled transitions = actual
+  processed work. Work-sig emails now label correctly
+  (settled/committed/inFlight) — previously mislabeled as
+  "calibration: 1 -> 0" because notify.py labels slots positionally.
 - **Serving nuance (2026-11-13)**: worker logs declare capacity
   ("capacity rate: 1 fits 4 sessions on cap 3") but `/session/info`
   reports `is_ready: false`, `capacity_sessions: null` — appears to be
