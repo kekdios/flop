@@ -109,7 +109,11 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
 - Separate demand-measurement experiment: serve inference on numes.ai
   marketplace, BTC-settled (Stripe USD payouts impossible from Ecuador).
 - **Box**: vast.ai instance `60277620` (contract), RTX A4000 16GB, Quebec,
-  ~$0.085/hr all-in (~$2/day on vast credit).
+  ~$0.208/hr all-in (~$5/day, ~$150/mo) — CORRECTED 2026-11-14: invoice
+  shows GPU $0.0787/hr + **storage $0.1296/hr** (100GB disk at premium
+  rate, only 14GB used — storage is 62% of the bill). Vast bills
+  allocated, not used; can't shrink an existing disk. Credit ~$20.86
+  left (of $35) as of 11-14.
   - SSH: `ssh -i ~/.flop/vast_ed25519 -p 40549 root@172.97.226.219`
     (needs `-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
     proxy alt: `-p 27640 root@ssh5.vast.ai`). If IP/port change, re-pull:
