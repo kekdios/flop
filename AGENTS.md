@@ -296,6 +296,26 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   (consumer GPUs, Mac Minis) is structural, not charity. Our devnet
   work (registration, calibration, Kibble attests) is the attested
   position that converts to allocation.
+- **TESTNET MIGRATION (docs: flop.finance/testnet)**: chain state NOT
+  migrated — only the airdrop allocation carries; testnet = fresh
+  registration on a new chain. Devnet FLOP is test-scrap; testnet
+  tokens are likewise valueless — attested WORK is the score.
+  Sponsored stake continues on testnet; miner admission via hardware
+  attestation OR application list (we have both). Testnet runs ~90d;
+  snapshot = ONE published finalized block height (no rolling), then
+  review/dispute window → genesis. Minimum-activity floors will be
+  published with testnet rules — sustained uptime through the window
+  is part of the score. Validator spec (provisional): 8+ core CPU,
+  64GB RAM, 4TB NVMe — droplet can't carry it; deferral stands.
+  DAY-1 RUNBOOK: (1) fetch testnet pack/env + RPC endpoint docs;
+  (2) repin worker/backend images per releases.json testnet keys;
+  (3) copy identity files (signer/ghost/session/enclave — SAME
+  identity, attestation continuity); (4) sponsorship grant — retry
+  cron pattern ready; (5) register ONLY with fully healthy stack —
+  calibration burst re-fires ~5min in, ONE shot; (6) `flop model
+  onboard` for new chain hash (old hash does NOT carry);
+  (7) republish endpoint ad; (8) repoint collectors to testnet
+  explorer/RPC. Estimated: hours, gated by FLOP-side releases.
 - **Validator landscape (verified 2026-11-13)**: separate role from
   miners — consensus/verification, NO GPU needed (Mac Mini viable;
   the retail-pitch door). Economics: inference fees split 85% miner /
