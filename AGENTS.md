@@ -142,7 +142,9 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   reconnects but not platform listings). Re-auth = user approves a
   device code at auth.numes.ai (generate via `numes auth login
   --login-method device`) — restores earnings/remote/platform queries.
-  Collector exposes `mgmt_auth` ("local_only" = expired). Also:
+  Collector exposes `mgmt_auth` ("signed_in:device" vs "expired" —
+  `auth status` top-level stays "local_only" even when authed; watch
+  `signed_in_methods`). Also:
   api.numes.ai 403s default `Python-urllib` UA — collector sends a UA
   header now (same class of block as the FLOP faucet 403).
 - **Reseller experiment (2026-11-12)**: second profile `or-tail` on the

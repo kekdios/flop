@@ -127,7 +127,10 @@ echo "RECONNECTS=$(grep -c 'reconnect' /root/vllm.log 2>/dev/null)"
                 if "AUTH<<" in txt:
                     try:
                         ablob = txt.split("AUTH<<", 1)[1].split(">>", 1)[0]
-                        out["mgmt_auth"] = json.loads(ablob).get("status")
+                        methods = (json.loads(ablob)
+                                   .get("signed_in_methods") or [])
+                        out["mgmt_auth"] = ("signed_in:" + ",".join(methods)
+                                            if methods else "expired")
                     except (ValueError, AttributeError):
                         pass
                 for line in txt.splitlines():
