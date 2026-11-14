@@ -72,7 +72,13 @@ fi
 drift=$(cat /var/lib/flop-ops/last-drift 2>/dev/null || echo "?")
 cliver=$(cat /var/lib/flop-ops/last-cliver 2>/dev/null || echo "?")
 wimg=$(echo "${REMOTE:-}" | sed -n 's/^WORKER_IMG=//p')
-rel=$(curl -fsm10 https://flop.network/releases.json 2>/dev/null | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("miner-worker",{}).get("image","")+"\t"+d.get("cli",{}).get("latest",""))' 2>/dev/null || true)
+rel_json=$(curl -fsm10 https://flop.network/releases.json 2>/dev/null || true)
+rel=$(echo "$rel_json" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("miner-worker",{}).get("image","")+"\t"+d.get("cli",{}).get("latest",""))' 2>/dev/null || true)
+# Testnet tripwire: releases.json is where pack/image/node artifacts will
+# land on launch day. Track the artifact key-set (sig diff emails on any
+# addition) and flag an explicit "testnet" mention in the payload.
+relkeys=$(echo "$rel_json" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(",".join(sorted(k for k in d if k!="models")))' 2>/dev/null || echo "?")
+case "$rel_json" in *[Tt]estnet*) note="TESTNET DETECTED in releases.json; $note";; esac
 rel_img=$(echo "$rel" | cut -f1); cli_new=$(echo "$rel" | cut -f2)
 if [ -n "$rel_img" ] && [ -n "$wimg" ]; then
   if [ "$wimg" = "$rel_img" ]; then drift="current"; else drift="STALE"; fi
@@ -109,10 +115,10 @@ mv "$OUT" "$SITE/status.json"
 # Signature stored in /var/lib/flop-ops/last-sig; first run seeds it silently.
 STATE_DIR=/var/lib/flop-ops
 case "$sess" in *[1-9]*) sess_bucket=live;; *) sess_bucket=idle;; esac
-sig="$miner_state|$gpu_state|$cal|$sess_bucket|$drift|cli:$cliver"
+sig="$miner_state|$gpu_state|$cal|$sess_bucket|$drift|cli:$cliver|rel:$relkeys"
 mkdir -p "$STATE_DIR"
 prev=$(cat "$STATE_DIR/last-sig" 2>/dev/null || true)
 if [ "$sig" != "$prev" ]; then
   echo "$sig" > "$STATE_DIR/last-sig"
-  [ -n "$prev" ] && /usr/local/lib/flop-ops/notify.py "$prev" "$sig" >>/var/log/flop-ops-notify.log 2>&1 &
+  [ -n "$prev" ] && /usr/local/lib/flop-ops/notify.py "$prev" "$sig" "miner,gpu,calibration,sessions,drift,cli,artifacts" >>/var/log/flop-ops-notify.log 2>&1 &
 fi
