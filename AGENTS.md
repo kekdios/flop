@@ -142,6 +142,10 @@ artifacts live on the ops droplet; this repo is the source of truth for scripts.
   reconnects but not platform listings). Re-auth = user approves a
   device code at auth.numes.ai (generate via `numes auth login
   --login-method device`) — restores earnings/remote/platform queries.
+  **Re-authed 2026-11-14 ~13:48 UTC → next expiry expected ~Nov 17**;
+  when `mgmt_auth` flips to "expired" just rerun the device flow.
+  (Longer-term: investigate whether daemons can run on a non-expiring
+  credential so this stops being a ~3-day chore.)
   Collector exposes `mgmt_auth` ("signed_in:device" vs "expired" —
   `auth status` top-level stays "local_only" even when authed; watch
   `signed_in_methods`). Also:
